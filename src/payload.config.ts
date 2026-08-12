@@ -1,5 +1,5 @@
 import path from 'path'
-import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -39,9 +39,11 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
-  // Base de données MongoDB (MongoDB Atlas, gratuit).
-  db: mongooseAdapter({
-    url: process.env.DATABASE_URI || '',
+  // Base de données PostgreSQL (Neon, gratuit sans carte).
+  // push: true → Payload crée/synchronise le schéma automatiquement (pas de migrations manuelles).
+  db: postgresAdapter({
+    pool: { connectionString: process.env.DATABASE_URI || '' },
+    push: true,
   }),
   sharp,
   plugins: [
