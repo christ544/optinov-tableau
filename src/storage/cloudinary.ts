@@ -51,23 +51,26 @@ export const cloudinaryAdapter =
       handleUpload: async ({ file }) => {
         const publicId = publicIdOf(file.filename)
         const timestamp = Math.floor(Date.now() / 1000)
+        // Paramètres signés (ordre alphabétique) : overwrite, public_id, timestamp.
         const signature = await sign(
-          { invalidate: 'true', overwrite: 'true', public_id: publicId, timestamp },
+          { overwrite: 'true', public_id: publicId, timestamp },
           opts.apiSecret,
         )
 
         const form = new FormData()
-        form.append('file', new Blob([file.buffer], { type: file.mimeType }), file.filename)
+        const blob = new Blob([file.buffer as unknown as ArrayBuffer], { type: file.mimeType })
+        form.append('file', blob, file.filename)
         form.append('api_key', opts.apiKey)
         form.append('timestamp', String(timestamp))
         form.append('public_id', publicId)
         form.append('overwrite', 'true')
-        form.append('invalidate', 'true')
         form.append('signature', signature)
 
         const res = await fetch(`${base}/auto/upload`, { method: 'POST', body: form })
         if (!res.ok) {
           const txt = await res.text()
+          // Affiche l'erreur exacte de Cloudinary dans les logs du serveur.
+          console.error('[Cloudinary] upload échoué', res.status, txt)
           throw new Error(`Cloudinary upload échoué (${res.status}): ${txt}`)
         }
       },
@@ -76,16 +79,12 @@ export const cloudinaryAdapter =
       handleDelete: async ({ filename }) => {
         const publicId = publicIdOf(filename)
         const timestamp = Math.floor(Date.now() / 1000)
-        const signature = await sign(
-          { invalidate: 'true', public_id: publicId, timestamp },
-          opts.apiSecret,
-        )
+        const signature = await sign({ public_id: publicId, timestamp }, opts.apiSecret)
 
         const form = new FormData()
         form.append('api_key', opts.apiKey)
         form.append('timestamp', String(timestamp))
         form.append('public_id', publicId)
-        form.append('invalidate', 'true')
         form.append('signature', signature)
 
         await fetch(`${base}/image/destroy`, { method: 'POST', body: form }).catch(() => {})
