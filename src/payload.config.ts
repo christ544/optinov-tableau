@@ -8,6 +8,7 @@ import { fr } from '@payloadcms/translations/languages/fr'
 import { cloudStoragePlugin } from '@payloadcms/plugin-cloud-storage'
 
 import { cloudinaryAdapter } from './storage/cloudinary'
+import { migrations } from './migrations'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Blog } from './collections/Blog'
@@ -40,10 +41,11 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   // Base de données PostgreSQL (Neon, gratuit sans carte).
-  // push: true → Payload crée/synchronise le schéma automatiquement (pas de migrations manuelles).
+  // push: false → on utilise des migrations explicites (fiable en production).
   db: postgresAdapter({
     pool: { connectionString: process.env.DATABASE_URI || '' },
-    push: true,
+    push: false,
+    prodMigrations: migrations, // applique le schéma automatiquement au démarrage en production
   }),
   sharp,
   plugins: [
