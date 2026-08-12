@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { triggerSiteRebuild } from '../hooks/triggerSiteRebuild'
 
 // Génère un slug (identifiant d'URL) à partir du titre.
 const slugify = (value: string) =>
@@ -32,6 +33,9 @@ export const Blog: CollectionConfig = {
         return data
       },
     ],
+    // Reconstruit le site après chaque création/modification/suppression d'article.
+    afterChange: [() => { void triggerSiteRebuild() }],
+    afterDelete: [() => { void triggerSiteRebuild() }],
   },
   fields: [
     {

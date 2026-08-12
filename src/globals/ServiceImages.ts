@@ -1,4 +1,5 @@
 import type { GlobalConfig } from 'payload'
+import { triggerSiteRebuild } from '../hooks/triggerSiteRebuild'
 
 // Un bloc de 3 images pour un service donné.
 const blocsService = (service: string, labels: [string, string, string]) => ({
@@ -20,6 +21,9 @@ export const ServiceImages: GlobalConfig = {
   },
   access: {
     read: () => true, // lisible par le site
+  },
+  hooks: {
+    afterChange: [() => { void triggerSiteRebuild() }],
   },
   fields: [
     blocsService('communication-visuelle', [
