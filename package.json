@@ -26,7 +26,10 @@
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.1",
+    "@payloadcms/db-d1-sqlite": "3.88.0",
+    "@payloadcms/db-mongodb": "^3.88.0",
     "@payloadcms/next": "3.88.0",
+    "@payloadcms/plugin-cloud-storage": "^3.88.0",
     "@payloadcms/richtext-lexical": "3.88.0",
     "@payloadcms/storage-r2": "3.88.0",
     "@payloadcms/ui": "3.88.0",
@@ -37,7 +40,7 @@
     "payload": "3.88.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "@payloadcms/db-d1-sqlite": "3.88.0"
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

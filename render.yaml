@@ -1,0 +1,26 @@
+# Déploiement du tableau de bord OPTINOV sur Render (gratuit, sans carte).
+# Render lit ce fichier automatiquement (« Blueprint ») et crée le service.
+services:
+  - type: web
+    name: optinov-dashboard
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22.12.0"
+      # Secret de sécurité Payload — généré automatiquement par Render.
+      - key: PAYLOAD_SECRET
+        generateValue: true
+      # À renseigner dans Render (valeurs privées) :
+      - key: DATABASE_URI # chaîne de connexion MongoDB Atlas
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
