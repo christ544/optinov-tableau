@@ -76,6 +76,7 @@ Prérequis : Node.js 22 et PostgreSQL (17 recommandé) installés.
 | `npm run generate:importmap` | régénère la carte d'imports de l'admin (après tout ajout de composant) |
 | `npm run lint` | analyse ESLint |
 | `npm run test` | tests d'intégration puis tests de bout en bout |
+| `npm run seed` | remplit la base LOCALE d'un jeu de démonstration « [Démo] » (refuse une base Neon) |
 
 ## Ce que le site peut lire
 
@@ -83,10 +84,17 @@ Toutes les lectures sont publiques ; l'écriture exige un compte du tableau de b
 
 | Adresse | Contenu |
 | --- | --- |
+| `GET /api/globals/parametres` | coordonnées, horaires, réseaux sociaux, liens PROS.CARDS, mentions légales |
 | `GET /api/blog?sort=-date&limit=10` | articles du blog, du plus récent au plus ancien |
 | `GET /api/blog?where[slug][equals]=mon-article` | un article par son identifiant d'URL |
+| `GET /api/realisations?where[publiee][equals]=true&sort=ordre` | le portfolio (seules les fiches publiées sortent, même sans ce filtre) |
+| `GET /api/temoignages?sort=ordre` | témoignages clients |
+| `GET /api/equipe?sort=ordre&depth=1` | membres de l'équipe, portrait inclus |
+| `GET /api/faq?sort=ordre` | questions fréquentes, avec leur thème |
 | `GET /api/globals/service-images?depth=1` | les illustrations des cinq pages Services, images incluses |
-| `GET /api/media/:id` | la fiche d'une image (URL, dimensions, texte alternatif) |
+| `GET /api/media/:id` | la fiche d'une image (URL, dimensions, texte alternatif, trois tailles) |
+
+Le site lit tout cela au build, par `scripts/sync-content.mjs` dans son dépôt.
 
 Le paramètre `depth` contrôle l'inclusion des relations : avec `depth=0`, une
 image est renvoyée sous forme d'identifiant ; avec `depth=1`, sous forme
