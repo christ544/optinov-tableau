@@ -17,6 +17,23 @@ import { ServiceImages } from './globals/ServiceImages'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+/*
+  Cloudinary n'est activé QUE si ses identifiants sont renseignés.
+
+  En production (Render), les trois variables CLOUDINARY_* sont définies : les
+  images partent sur le CDN Cloudinary, comme avant.
+
+  En développement local, on les laisse vides : Payload retombe alors sur son
+  comportement par défaut et écrit les fichiers sur le disque, dans ./media
+  (dossier déjà ignoré par Git). Chacun peut ainsi lancer le tableau de bord
+  sur son PC sans compte Cloudinary, et sans risquer d'écraser les images du
+  site en ligne avec des essais.
+
+  Garder le plugin déclaré avec un cloudName vide ne serait pas une option :
+  chaque téléversement échouerait sur une URL Cloudinary invalide.
+*/
+const CLOUDINARY_ACTIF = Boolean(process.env.CLOUDINARY_CLOUD_NAME)
+
 export default buildConfig({
   admin: {
     user: Users.slug,
@@ -48,20 +65,22 @@ export default buildConfig({
     prodMigrations: migrations, // applique le schéma automatiquement au démarrage en production
   }),
   sharp,
-  plugins: [
-    // Stockage des images sur Cloudinary (gratuit, sans carte).
-    cloudStoragePlugin({
-      collections: {
-        media: {
-          disablePayloadAccessControl: true, // images servies directement par le CDN Cloudinary
-          adapter: cloudinaryAdapter({
-            cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
-            apiKey: process.env.CLOUDINARY_API_KEY || '',
-            apiSecret: process.env.CLOUDINARY_API_SECRET || '',
-            folder: 'optinov',
-          }),
-        },
-      },
-    }),
-  ],
+  plugins: CLOUDINARY_ACTIF
+    ? [
+        // Stockage des images sur Cloudinary (gratuit, sans carte).
+        cloudStoragePlugin({
+          collections: {
+            media: {
+              disablePayloadAccessControl: true, // images servies directement par le CDN Cloudinary
+              adapter: cloudinaryAdapter({
+                cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+                apiKey: process.env.CLOUDINARY_API_KEY || '',
+                apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+                folder: 'optinov',
+              }),
+            },
+          },
+        }),
+      ]
+    : [], // en local : images sur le disque, dans ./media
 })

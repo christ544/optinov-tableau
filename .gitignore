@@ -57,3 +57,6 @@ shot*.png
 shot*.mjs
 AGENTS.md
 CLAUDE.md
+
+# Reglages locaux de Claude Code (configuration de lancement du serveur)
+.claude/
