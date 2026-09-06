@@ -311,6 +311,81 @@ servir de modèle.
 
 ---
 
+## 10. Ce qui reste à faire après les fusions
+
+Une fois les sept PR fusionnées et Render redéployé, ces gestes terminent la mise
+en service. Ils ne demandent pas de code, mais ils demandent les accès de l'agence.
+
+### A. Brancher les alertes e-mail (dès la fusion de #6)
+
+1. Dans le **compte Google de l'agence** : Sécurité > Validation en deux étapes
+   (l'activer si besoin) > **Mots de passe des applications** > créer un mot de
+   passe nommé « Tableau de bord ». Google affiche seize caractères : les copier.
+2. Dans **Render** > service `optinov-dashboard` > Environment, renseigner :
+
+   | Variable | Valeur |
+   | --- | --- |
+   | `SMTP_USER` | l'adresse Gmail de l'agence |
+   | `SMTP_PASS` | les seize caractères du mot de passe d'application (jamais le mot de passe du compte) |
+   | `ALERTES_EMAIL` | l'adresse qui doit recevoir les alertes (peut être la même) |
+
+   `SMTP_HOST` et `SMTP_PORT` sont déjà fixés dans `render.yaml`. Render redémarre
+   le service tout seul.
+3. **Tester avec un vrai formulaire** depuis le site en ligne (page Contact) :
+   la demande doit apparaître dans le tableau de bord, rubrique Demandes ; l'alerte
+   doit arriver sur `ALERTES_EMAIL` ; l'accusé de réception sur l'adresse saisie
+   dans le formulaire. Ensuite, supprimer la demande de test dans le tableau de bord.
+4. Si l'alerte n'arrive pas : Render > Logs, chercher « Alerte NON envoyée ». La
+   cause est presque toujours un mot de passe d'application mal copié ou la
+   validation en deux étapes désactivée.
+
+### B. Vérifier la reconstruction automatique du site
+
+1. Dans **Cloudflare** > Workers & Pages > `optinov-agence` > Settings > Builds >
+   **Deploy hooks** : créer un hook s'il n'existe pas, copier son URL.
+2. Dans **Render** > Environment : `SITE_DEPLOY_HOOK` = cette URL.
+3. Test de bout en bout : modifier un témoignage dans le tableau de bord,
+   enregistrer, attendre deux minutes (regroupement) puis le temps du build
+   Cloudflare (deux à trois minutes). La modification doit apparaître sur le site.
+   Si rien ne bouge : Render > Logs, chercher « Reconstruction du site » ; puis
+   Cloudflare > Deployments, vérifier qu'un build est parti et lire son journal.
+
+### C. Créer les comptes de l'équipe
+
+Dans le tableau de bord > Administration > Utilisateurs > Ajouter : nom, e-mail,
+mot de passe provisoire, rôle. **Administrateur** pour les personnes qui gèrent
+les comptes, **Éditeur** pour celles qui ne touchent qu'au contenu. Chaque personne
+change ensuite son mot de passe depuis « Mon compte ». Supprimer les comptes de
+test qui ne servent plus.
+
+### D. Contenus à obtenir de la direction
+
+Ces éléments sont encore écrits « [À compléter] » dans le code du site, ou vides.
+Ils ne se saisissent pas dans le tableau de bord : ils demandent une modification
+du code du site (une PR) une fois les valeurs arrêtées.
+
+| Élément | Où dans le code du site |
+| --- | --- |
+| Raison sociale, forme juridique, capital, coordonnées de l'hébergeur | `app/(site)/mentions-legales/page.js` |
+| Date de mise à jour, référent protection des données, durées de conservation | `app/(site)/politique-de-confidentialite/page.js` |
+| Prix des trois offres PROS.CARDS | `content/prosCards.js` |
+| Chiffres clés et logos clients de l'accueil | `content/site.js` (`chiffresCles`, `logosClients`) |
+
+En revanche, **coordonnées, horaires, RCCM, directeur de publication, hébergeur,
+réseaux sociaux et liens PROS.CARDS** se saisissent directement dans le tableau
+de bord, rubrique Paramètres du site, et arrivent sur le site à la reconstruction
+suivante.
+
+### E. Remplir le tableau de bord
+
+Le site affiche ce que contient le tableau de bord. À saisir pour que les pages
+correspondantes s'affichent : au moins un article de blog, les illustrations des
+cinq pages Services, les témoignages, l'équipe, les réalisations (cochées
+« Publiée »). Tant qu'une rubrique est vide, la section du site correspondante se
+masque ou affiche un message d'attente.
+
+---
+
 ## Aide-mémoire
 
 | Je veux... | Commande ou action |
