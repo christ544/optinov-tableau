@@ -2,15 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { estConnecte, lecturePublique } from '../access'
 import { triggerSiteRebuild } from '../hooks/triggerSiteRebuild'
-
-// Génère un slug (identifiant d'URL) à partir du titre.
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // enlève les accents
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '')
+import { slugify } from '../lib/slug'
 
 /*
   Les catégories du blog. Exportées pour que le tableau de bord d'accueil

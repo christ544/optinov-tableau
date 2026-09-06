@@ -32,6 +32,7 @@ import { tempsRelatif, tendance } from '../../lib/format'
 import {
   IconeArticle,
   IconeBrouillon,
+  IconeChantier,
   IconeCrayon,
   IconeEclair,
   IconePlus,
@@ -209,6 +210,8 @@ async function chargerTableau(payload: any, user: any) {
     medias,
     medias30j,
     medias30jPrec,
+    realisations,
+    realisationsPubliees,
   ] = await Promise.all([
     compter('blog', {}),
     compter('blog', { aLaUne: { equals: true } }),
@@ -219,6 +222,8 @@ async function chargerTableau(payload: any, user: any) {
     compter('media', {}),
     compter('media', surLes30DerniersJours),
     compter('media', surLes30JoursPrecedents),
+    compter('realisations', {}),
+    compter('realisations', { publiee: { equals: true } }),
   ])
 
   /*
@@ -280,6 +285,11 @@ async function chargerTableau(payload: any, user: any) {
       libelle: 'Rédiger le résumé court des articles',
       reste: articlesSansExtrait,
     },
+    {
+      href: '/admin/collections/realisations',
+      libelle: 'Publier la première réalisation du portfolio',
+      reste: realisationsPubliees === 0 ? 1 : 0,
+    },
   ]
 
   return {
@@ -297,6 +307,8 @@ async function chargerTableau(payload: any, user: any) {
     medias30j,
     medias30jPrec,
     prenom,
+    realisations,
+    realisationsPubliees,
     taches,
   }
 }
@@ -372,6 +384,17 @@ export const TableauDeBord = async (props: any) => {
               : { type: 'aucun' }
           }
           valeur={d.articlesSansImage}
+        />
+        <Tuile
+          href="/admin/collections/realisations"
+          icone={<IconeChantier taille={19} />}
+          label="Réalisations publiées"
+          pied={
+            d.realisations > 0
+              ? { legende: 'du portfolio en ligne', max: d.realisations, type: 'barre', valeur: d.realisationsPubliees }
+              : { type: 'aucun' }
+          }
+          valeur={d.realisationsPubliees}
         />
         <Tuile
           href="/admin/collections/media"
@@ -512,16 +535,22 @@ export const TableauDeBord = async (props: any) => {
             <h2 className="op-aside__titre">Raccourcis</h2>
             <ul className="op-raccourcis">
               <li>
-                <Link href="/admin/collections/blog">Tous les articles</Link>
+                <Link href="/admin/collections/realisations">Réalisations</Link>
+              </li>
+              <li>
+                <Link href="/admin/collections/temoignages">Témoignages</Link>
+              </li>
+              <li>
+                <Link href="/admin/collections/equipe">Équipe</Link>
+              </li>
+              <li>
+                <Link href="/admin/collections/faq">Questions fréquentes</Link>
+              </li>
+              <li>
+                <Link href="/admin/globals/parametres">Paramètres du site</Link>
               </li>
               <li>
                 <Link href="/admin/collections/media">Médiathèque</Link>
-              </li>
-              <li>
-                <Link href="/admin/globals/service-images">Images des pages Services</Link>
-              </li>
-              <li>
-                <Link href="/admin/collections/users">Utilisateurs</Link>
               </li>
               <li>
                 <a href={SITE} rel="noreferrer" target="_blank">

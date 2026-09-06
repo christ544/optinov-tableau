@@ -12,6 +12,11 @@ import { migrations } from './migrations'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Blog } from './collections/Blog'
+import { Equipe } from './collections/Equipe'
+import { Faq } from './collections/Faq'
+import { Realisations } from './collections/Realisations'
+import { Temoignages } from './collections/Temoignages'
+import { Parametres } from './globals/Parametres'
 import { ServiceImages } from './globals/ServiceImages'
 
 const filename = fileURLToPath(import.meta.url)
@@ -137,8 +142,19 @@ export default buildConfig({
       },
     },
   },
-  collections: [Users, Media, Blog],
-  globals: [ServiceImages],
+  collections: [
+    // Contenus
+    Blog,
+    Realisations,
+    Temoignages,
+    Equipe,
+    Faq,
+    // Bibliothèque
+    Media,
+    // Administration
+    Users,
+  ],
+  globals: [ServiceImages, Parametres],
   editor: lexicalEditor(),
   // Interface d'administration entièrement en français.
   i18n: {

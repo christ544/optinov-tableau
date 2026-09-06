@@ -67,9 +67,13 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    users: User;
-    media: Media;
     blog: Blog;
+    realisations: Realisation;
+    temoignages: Temoignage;
+    equipe: Equipe;
+    faq: Faq;
+    media: Media;
+    users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -77,9 +81,13 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    users: UsersSelect<false> | UsersSelect<true>;
-    media: MediaSelect<false> | MediaSelect<true>;
     blog: BlogSelect<false> | BlogSelect<true>;
+    realisations: RealisationsSelect<false> | RealisationsSelect<true>;
+    temoignages: TemoignagesSelect<false> | TemoignagesSelect<true>;
+    equipe: EquipeSelect<false> | EquipeSelect<true>;
+    faq: FaqSelect<false> | FaqSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -91,9 +99,11 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     'service-images': ServiceImage;
+    parametres: Parametre;
   };
   globalsSelect: {
     'service-images': ServiceImagesSelect<false> | ServiceImagesSelect<true>;
+    parametres: ParametresSelect<false> | ParametresSelect<true>;
   };
   locale: null;
   widgets: {
@@ -124,33 +134,47 @@ export interface UserAuthOperations {
   };
 }
 /**
- * Les personnes autorisées à se connecter au tableau de bord.
+ * Créez, modifiez et illustrez vos articles de blog.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
+ * via the `definition` "blog".
  */
-export interface User {
+export interface Blog {
   id: number;
-  name: string;
-  role: 'administrateur' | 'editeur';
+  titre: string;
+  /**
+   * Laissez vide : il se remplit tout seul à partir du titre.
+   */
+  slug?: string | null;
+  categorie?: ('branding' | 'marketing-digital' | 'ia' | 'carte-digitale' | 'agence') | null;
+  date?: string | null;
+  image?: (number | null) | Media;
+  extrait?: string | null;
+  tempsLecture?: number | null;
+  auteur?: string | null;
+  aLaUne?: boolean | null;
+  /**
+   * Ex : communication-visuelle
+   */
+  serviceLie?: string | null;
+  landingLiee?: string | null;
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   updatedAt: string;
   createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
 }
 /**
  * Toutes les images téléversées (couvertures, illustrations…).
@@ -203,47 +227,171 @@ export interface Media {
   };
 }
 /**
- * Créez, modifiez et illustrez vos articles de blog.
+ * Le portfolio : une fiche par projet, publiée quand elle est prête.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "blog".
+ * via the `definition` "realisations".
  */
-export interface Blog {
+export interface Realisation {
   id: number;
   titre: string;
   /**
    * Laissez vide : il se remplit tout seul à partir du titre.
    */
   slug?: string | null;
-  categorie?: ('branding' | 'marketing-digital' | 'ia' | 'carte-digitale' | 'agence') | null;
-  date?: string | null;
-  image?: (number | null) | Media;
-  extrait?: string | null;
-  tempsLecture?: number | null;
-  auteur?: string | null;
-  aLaUne?: boolean | null;
   /**
-   * Ex : communication-visuelle
+   * Décochée : la fiche reste invisible des visiteurs.
    */
-  serviceLie?: string | null;
-  landingLiee?: string | null;
-  body?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
+  publiee?: boolean | null;
+  /**
+   * Du plus petit au plus grand.
+   */
+  ordre?: number | null;
+  client: string;
+  /**
+   * Ex. 2026
+   */
+  annee: string;
+  /**
+   * Le premier choisi donne le type de mission affiché.
+   */
+  services: ('visuel' | 'digital' | 'marketing' | 'ia' | 'photo-video')[];
+  secteur: 'btp' | 'distribution' | 'immobilier' | 'sante' | 'institution' | 'services';
+  extrait: string;
+  visuel?: (number | null) | Media;
+  galerie?: (number | Media)[] | null;
+  contexte: string;
+  objectifs?:
+    | {
+        texte: string;
+        id?: string | null;
+      }[]
+    | null;
+  reponse: string;
+  resultats?:
+    | {
+        /**
+         * Ex. « +40 % »
+         */
+        valeur: string;
+        /**
+         * Ex. « de demandes entrantes »
+         */
+        label: string;
+        id?: string | null;
+      }[]
+    | null;
+  temoignage?: {
+    verbatim?: string | null;
+    nom?: string | null;
+    fonction?: string | null;
+  };
+  /**
+   * Facultatif : deux images de même cadrage, le visiteur déplace un curseur.
+   */
+  avantApres?: {
+    activer?: boolean | null;
+    avant?: (number | null) | Media;
+    apres?: (number | null) | Media;
+  };
+  /**
+   * Mise en avant comme étude de cas détaillée.
+   */
+  etudeDeCas?: boolean | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Les témoignages clients affichés sur la page d’accueil.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "temoignages".
+ */
+export interface Temoignage {
+  id: number;
+  nom: string;
+  fonction: string;
+  entreprise: string;
+  verbatim: string;
+  /**
+   * Un témoignage ne se publie pas sans accord écrit du client, conservé par l’agence.
+   */
+  consentement: boolean;
+  /**
+   * Du plus petit au plus grand.
+   */
+  ordre?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Les portraits affichés sur la page À propos.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "equipe".
+ */
+export interface Equipe {
+  id: number;
+  nom: string;
+  role: string;
+  photo?: (number | null) | Media;
+  /**
+   * Facultatif. Adresse complète du profil.
+   */
+  linkedin?: string | null;
+  /**
+   * Du plus petit au plus grand.
+   */
+  ordre?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Les questions-réponses de la page FAQ, par thème.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faq".
+ */
+export interface Faq {
+  id: number;
+  theme: 'agence' | 'tarifs' | 'pros-cards' | 'support';
+  question: string;
+  reponse: string;
+  /**
+   * Dans le thème, du plus petit au plus grand.
+   */
+  ordre?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Les personnes autorisées à se connecter au tableau de bord.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name: string;
+  role: 'administrateur' | 'editeur';
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -270,16 +418,32 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'users';
-        value: number | User;
+        relationTo: 'blog';
+        value: number | Blog;
+      } | null)
+    | ({
+        relationTo: 'realisations';
+        value: number | Realisation;
+      } | null)
+    | ({
+        relationTo: 'temoignages';
+        value: number | Temoignage;
+      } | null)
+    | ({
+        relationTo: 'equipe';
+        value: number | Equipe;
+      } | null)
+    | ({
+        relationTo: 'faq';
+        value: number | Faq;
       } | null)
     | ({
         relationTo: 'media';
         value: number | Media;
       } | null)
     | ({
-        relationTo: 'blog';
-        value: number | Blog;
+        relationTo: 'users';
+        value: number | User;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -325,27 +489,111 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users_select".
+ * via the `definition` "blog_select".
  */
-export interface UsersSelect<T extends boolean = true> {
-  name?: T;
-  role?: T;
+export interface BlogSelect<T extends boolean = true> {
+  titre?: T;
+  slug?: T;
+  categorie?: T;
+  date?: T;
+  image?: T;
+  extrait?: T;
+  tempsLecture?: T;
+  auteur?: T;
+  aLaUne?: T;
+  serviceLie?: T;
+  landingLiee?: T;
+  body?: T;
   updatedAt?: T;
   createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-  sessions?:
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "realisations_select".
+ */
+export interface RealisationsSelect<T extends boolean = true> {
+  titre?: T;
+  slug?: T;
+  publiee?: T;
+  ordre?: T;
+  client?: T;
+  annee?: T;
+  services?: T;
+  secteur?: T;
+  extrait?: T;
+  visuel?: T;
+  galerie?: T;
+  contexte?: T;
+  objectifs?:
     | T
     | {
+        texte?: T;
         id?: T;
-        createdAt?: T;
-        expiresAt?: T;
       };
+  reponse?: T;
+  resultats?:
+    | T
+    | {
+        valeur?: T;
+        label?: T;
+        id?: T;
+      };
+  temoignage?:
+    | T
+    | {
+        verbatim?: T;
+        nom?: T;
+        fonction?: T;
+      };
+  avantApres?:
+    | T
+    | {
+        activer?: T;
+        avant?: T;
+        apres?: T;
+      };
+  etudeDeCas?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "temoignages_select".
+ */
+export interface TemoignagesSelect<T extends boolean = true> {
+  nom?: T;
+  fonction?: T;
+  entreprise?: T;
+  verbatim?: T;
+  consentement?: T;
+  ordre?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "equipe_select".
+ */
+export interface EquipeSelect<T extends boolean = true> {
+  nom?: T;
+  role?: T;
+  photo?: T;
+  linkedin?: T;
+  ordre?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faq_select".
+ */
+export interface FaqSelect<T extends boolean = true> {
+  theme?: T;
+  question?: T;
+  reponse?: T;
+  ordre?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -401,23 +649,27 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "blog_select".
+ * via the `definition` "users_select".
  */
-export interface BlogSelect<T extends boolean = true> {
-  titre?: T;
-  slug?: T;
-  categorie?: T;
-  date?: T;
-  image?: T;
-  extrait?: T;
-  tempsLecture?: T;
-  auteur?: T;
-  aLaUne?: T;
-  serviceLie?: T;
-  landingLiee?: T;
-  body?: T;
+export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -496,6 +748,60 @@ export interface ServiceImage {
   createdAt?: string | null;
 }
 /**
+ * Coordonnées, réseaux sociaux, liens PROS.CARDS et mentions légales.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "parametres".
+ */
+export interface Parametre {
+  id: number;
+  nom: string;
+  /**
+   * Sous le logo, dans le pied de page et les partages.
+   */
+  baseline: string;
+  telephone: string;
+  telephoneFixe?: string | null;
+  /**
+   * Format international sans « + » ni espace, ex. 2250700000000.
+   */
+  whatsapp: string;
+  email: string;
+  adresse: string;
+  ville: string;
+  pays: string;
+  /**
+   * Ex. « Lundi–vendredi, 8 h–18 h ». Vide : non affiché.
+   */
+  horaires?: string | null;
+  delaiReponse?: string | null;
+  /**
+   * Adresse Cal.com ou Calendly. Vide : le bouton « Prendre rendez-vous » mène à la page Contact.
+   */
+  rdvUrl?: string | null;
+  /**
+   * Un réseau sans adresse n’est pas affiché.
+   */
+  reseaux?: {
+    linkedin?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
+  };
+  /**
+   * Points d’entrée vers la plateforme. Un lien vide mène à la page Contact.
+   */
+  prosCards?: {
+    inscription?: string | null;
+    connexion?: string | null;
+    demo?: string | null;
+  };
+  rccm?: string | null;
+  directeurPublication?: string | null;
+  hebergeur?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "service-images_select".
  */
@@ -535,6 +841,44 @@ export interface ServiceImagesSelect<T extends boolean = true> {
         img2?: T;
         img3?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "parametres_select".
+ */
+export interface ParametresSelect<T extends boolean = true> {
+  nom?: T;
+  baseline?: T;
+  telephone?: T;
+  telephoneFixe?: T;
+  whatsapp?: T;
+  email?: T;
+  adresse?: T;
+  ville?: T;
+  pays?: T;
+  horaires?: T;
+  delaiReponse?: T;
+  rdvUrl?: T;
+  reseaux?:
+    | T
+    | {
+        linkedin?: T;
+        instagram?: T;
+        facebook?: T;
+      };
+  prosCards?:
+    | T
+    | {
+        inscription?: T;
+        connexion?: T;
+        demo?: T;
+      };
+  rccm?: T;
+  directeurPublication?: T;
+  hebergeur?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

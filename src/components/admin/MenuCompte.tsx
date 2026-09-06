@@ -100,9 +100,9 @@ export const MenuCompte: React.FC<{ lienSite?: string }> = ({ lienSite }) => {
             <IconeCompte taille={17} />
             Mon compte
           </Link>
-          <Link className="op-menu-compte__entree" href="/admin/globals/service-images" role="menuitem">
+          <Link className="op-menu-compte__entree" href="/admin/globals/parametres" role="menuitem">
             <IconeReglages taille={17} />
-            Images des pages Services
+            Paramètres du site
           </Link>
           {lienSite && (
             <a
