@@ -32,11 +32,20 @@ PlanetHoster le jour où l'hébergement change.
 | #3 | tableau de bord | `etape-3-habillage-optinov` | charte OPTINOV dans l'admin, accueil sur mesure, logo |
 | #4 | tableau de bord | `etape-4-securite` | rôles administrateur / éditeur, CORS et CSRF, uploads, GraphQL coupé ; **contient une migration** |
 | #5 | tableau de bord | `etape-5-contenus` | paramètres du site, réalisations, témoignages, équipe, FAQ ; **contient deux migrations** |
-| site | site vitrine | `dashboard-payload` | le site lit le tableau de bord, seule source de vérité ; retrait des anciens outils d'édition |
+| site 1 | site vitrine | `dashboard-payload` | le site lit le tableau de bord, seule source de vérité ; retrait des anciens outils d'édition |
+| #6 | tableau de bord | `etape-6-demandes` | rubrique Demandes, alertes e-mail par le Gmail de l'agence ; **contient une migration** |
+| site 2 | site vitrine | `formulaires-vers-dashboard` | les formulaires envoient les demandes au tableau de bord |
 
-**Ordre à respecter :** #1, #2, #3, #4, #5, puis la PR du site, **après** que Render a
-redéployé le tableau de bord (section 5). Dans l'autre sens, la construction du site
-échoue exprès, parce que les nouvelles rubriques n'existent pas encore dans l'API.
+**Ordre à respecter :** #1, #2, #3, #4, #5, puis la PR « site 1 » **après** que Render a
+redéployé le tableau de bord (section 5) ; ensuite #6, puis « site 2 » après le
+redéploiement suivant. Dans l'autre sens, la construction du site échoue exprès,
+parce que les nouvelles rubriques n'existent pas encore dans l'API.
+
+**Après la fusion de #6**, renseigner dans Render trois variables : `SMTP_USER`
+(l'adresse Gmail de l'agence), `SMTP_PASS` (un mot de passe d'application Google,
+créé dans le compte Google > Sécurité > Validation en deux étapes > Mots de passe
+des applications) et `ALERTES_EMAIL` (l'adresse qui reçoit les alertes). Sans elles,
+les demandes sont enregistrées mais personne n'est prévenu.
 
 ---
 
