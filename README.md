@@ -108,11 +108,43 @@ suppression d'article, et après chaque changement d'illustration, le hook
 `src/hooks/triggerSiteRebuild.ts` appelle l'URL définie par `SITE_DEPLOY_HOOK`
 (le « Deploy Hook » de Cloudflare Pages). Variable vide : rien ne se passe.
 
+Les appels sont regroupés : le hook ne part que deux minutes après le dernier
+enregistrement, pour qu'une session de saisie ne déclenche qu'une seule
+reconstruction et non une par clic sur « Enregistrer ».
+
+## Comptes et sécurité
+
+Deux rôles :
+
+| Rôle | Droits |
+| --- | --- |
+| Administrateur | tout le contenu, plus la création et la suppression des comptes |
+| Éditeur | tout le contenu (articles, images, illustrations des pages Services) |
+
+Chacun peut modifier son propre compte, mais seul un administrateur peut
+changer un rôle. Le tout premier compte créé est automatiquement
+administrateur. Après cinq mots de passe erronés, un compte est bloqué dix
+minutes.
+
+Ce qui est en place par ailleurs :
+
+- **CORS et CSRF** : seuls le site vitrine (`FRONTEND_URL`) et le tableau de
+  bord lui-même peuvent appeler l'API en écriture avec un cookie de session.
+  L'adresse du tableau de bord se déduit de `RENDER_EXTERNAL_URL` sur Render,
+  ou de `PAYLOAD_PUBLIC_SERVER_URL` avec un nom de domaine dédié. Si cette
+  adresse est fausse, la consultation marche mais tout enregistrement échoue.
+- **Uploads** : images uniquement (JPEG, PNG, WebP, AVIF, GIF, pas de SVG),
+  15 Mo maximum, converties en WebP et déclinées en trois tailles
+  (`vignette` 400 px, `carte` 800 px, `grande` 1600 px).
+- **GraphQL désactivé** : le site n'utilise que l'API REST.
+- **Cookie de session** `Secure` dès que l'adresse publique est en `https://`.
+
 ## Déploiement sur Render
 
 Render lit `render.yaml` et crée le service. Variables à renseigner dans son
 interface : `DATABASE_URI` (Neon, avec `?sslmode=require`), les trois variables
-`CLOUDINARY_*` et `SITE_DEPLOY_HOOK`. `PAYLOAD_SECRET` est généré par Render.
+`CLOUDINARY_*` et `SITE_DEPLOY_HOOK`. `PAYLOAD_SECRET` est généré par Render,
+`FRONTEND_URL` est fixée dans `render.yaml`.
 
 Les migrations s'appliquent automatiquement au démarrage en production
 (`prodMigrations` dans `src/payload.config.ts`). Le schéma n'est jamais

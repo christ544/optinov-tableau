@@ -1,4 +1,6 @@
 import type { GlobalConfig } from 'payload'
+
+import { estConnecte, lecturePublique } from '../access'
 import { triggerSiteRebuild } from '../hooks/triggerSiteRebuild'
 
 /*
@@ -77,10 +79,12 @@ export const ServiceImages: GlobalConfig = {
   label: 'Images des pages Services',
   admin: {
     group: 'Contenus',
+    hideAPIURL: true,
     description: 'Illustrations de chaque bloc des pages Services.',
   },
   access: {
-    read: () => true, // lisible par le site
+    read: lecturePublique, // lisible par le site
+    update: estConnecte, // modifiable par toute personne connectée
   },
   hooks: {
     afterChange: [() => { void triggerSiteRebuild() }],

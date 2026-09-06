@@ -1,4 +1,6 @@
 import type { CollectionConfig } from 'payload'
+
+import { estConnecte, lecturePublique } from '../access'
 import { triggerSiteRebuild } from '../hooks/triggerSiteRebuild'
 
 // Génère un slug (identifiant d'URL) à partir du titre.
@@ -31,12 +33,17 @@ export const Blog: CollectionConfig = {
   },
   admin: {
     group: 'Contenus',
+    hideAPIURL: true,
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'categorie', 'date', 'aLaUne'],
     description: 'Créez, modifiez et illustrez vos articles de blog.',
   },
   access: {
-    read: () => true, // les articles sont lisibles publiquement (le site les affiche)
+    read: lecturePublique, // le site affiche les articles : lecture publique
+    // Écriture réservée aux personnes connectées (administrateurs et éditeurs).
+    create: estConnecte,
+    update: estConnecte,
+    delete: estConnecte,
   },
   hooks: {
     beforeValidate: [

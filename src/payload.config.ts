@@ -35,11 +35,35 @@ const dirname = path.dirname(filename)
 const CLOUDINARY_ACTIF = Boolean(process.env.CLOUDINARY_CLOUD_NAME)
 
 /*
-  L'adresse du site vitrine. Elle sert au lien « Voir le site en ligne » du
-  menu compte et du tableau de bord. À défaut de FRONTEND_URL, l'adresse
-  actuelle du site sur Cloudflare.
+  L'adresse du site vitrine. Elle sert à deux choses : autoriser ses appels à
+  l'API (CORS, voir plus bas) et alimenter le lien « Voir le site en ligne ».
+  À défaut de FRONTEND_URL, l'adresse actuelle du site sur Cloudflare.
 */
 const SITE_VITRINE = process.env.FRONTEND_URL || 'https://optinov-agence.christkangah14.workers.dev'
+
+/*
+  L'adresse publique de CE tableau de bord. Payload en a besoin pour fabriquer
+  des URL absolues (lien « mot de passe oublié » des e-mails) et pour la
+  protection CSRF ci-dessous.
+
+  Sur Render, la variable RENDER_EXTERNAL_URL est fournie automatiquement
+  (https://optinov-dashboard.onrender.com) : rien à configurer. Le jour où le
+  tableau de bord aura son propre nom de domaine, PAYLOAD_PUBLIC_SERVER_URL
+  prendra le dessus. En local : http://localhost:3000.
+*/
+const SERVEUR =
+  process.env.PAYLOAD_PUBLIC_SERVER_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000'
+
+/*
+  Origines supplémentaires autorisées à écrire, séparées par des virgules.
+  Utile le temps d'une bascule de nom de domaine : l'ancienne et la nouvelle
+  adresse fonctionnent toutes deux pendant la propagation DNS.
+  Exemple : ORIGINES_AUTORISEES=https://admin.optinov.ci,https://www.optinov.ci
+*/
+const ORIGINES_SUPPLEMENTAIRES = (process.env.ORIGINES_AUTORISEES ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean)
 
 export default buildConfig({
   admin: {
@@ -139,7 +163,59 @@ export default buildConfig({
       },
     },
   },
+  /*
+    GRAPHQL DÉSACTIVÉ. Payload expose par défaut une API GraphQL en plus du
+    REST, avec son introspection accessible sans authentification : une
+    documentation d'attaque clé en main (noms exacts des mutations et de leurs
+    champs). Le site n'appelle que l'API REST, et l'admin n'a pas besoin de
+    GraphQL : rien ne justifie de garder cette seconde surface exposée.
+  */
+  graphQL: {
+    disable: true,
+  },
+
+  /*
+    ------------------------------------------------------------- SÉCURITÉ
+
+    Le « secret » signe les cookies de session : c'est lui qui empêche de
+    fabriquer un faux cookie pour se faire passer pour un administrateur. Il
+    ne doit JAMAIS être commité : il vit dans .env (local) ou dans Render.
+  */
   secret: process.env.PAYLOAD_SECRET || '',
+
+  /*
+    CORS : « qui a le droit d'appeler mon API depuis un navigateur ? »
+    On autorise explicitement le site vitrine, et lui seul.
+
+    CSRF : « quelles origines peuvent utiliser mon cookie de session ? »
+    Cela empêche un site malveillant de déclencher, à votre insu et depuis
+    votre navigateur déjà connecté, une suppression d'article.
+
+    IMPORTANT : le tableau de bord lui-même DOIT figurer dans `csrf`
+    (SERVEUR). Une requête d'écriture envoyée par l'admin porte l'en-tête
+    Origin = son propre domaine ; si ce domaine n'est pas dans la liste,
+    Payload ignore le cookie et refuse tout enregistrement, même à un
+    administrateur. Symptôme : la consultation marche, l'enregistrement échoue
+    avec « Vous n'êtes pas autorisé à effectuer cette action ». C'est pourquoi
+    SERVEUR se déduit de RENDER_EXTERNAL_URL quand rien n'est configuré.
+  */
+  serverURL: SERVEUR,
+  cors: Array.from(new Set([SITE_VITRINE, ...ORIGINES_SUPPLEMENTAIRES])),
+  csrf: Array.from(new Set([SITE_VITRINE, SERVEUR, ...ORIGINES_SUPPLEMENTAIRES])),
+
+  /*
+    LIMITE DE TAILLE DES FICHIERS TÉLÉVERSÉS : sans elle, un compte compromis
+    pouvait déposer un fichier de taille arbitraire. C'est un réglage global,
+    pas par collection ; la liste blanche des types de fichiers, elle, est
+    dans Media.ts. 15 Mo est largement au-dessus d'une photo normale, qui est
+    de toute façon recompressée en WebP à l'upload.
+  */
+  upload: {
+    limits: {
+      fileSize: 15 * 1024 * 1024,
+    },
+  },
+
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },

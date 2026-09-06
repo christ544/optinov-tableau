@@ -18,6 +18,12 @@ services:
       # Secret de signature des sessions, généré automatiquement par Render.
       - key: PAYLOAD_SECRET
         generateValue: true
+      # Adresse du site vitrine (CORS et lien « Voir le site en ligne »).
+      - key: FRONTEND_URL
+        value: https://optinov-agence.christkangah14.workers.dev
+      # L'adresse publique du tableau de bord n'a pas besoin d'être renseignée :
+      # Render fournit RENDER_EXTERNAL_URL automatiquement. Ne définir
+      # PAYLOAD_PUBLIC_SERVER_URL qu'avec un nom de domaine dédié.
       # À renseigner dans l'interface Render (valeurs privées) :
       - key: DATABASE_URI # chaîne de connexion PostgreSQL Neon (avec ?sslmode=require)
         sync: false
