@@ -21,6 +21,12 @@ import { StrikethroughFeatureClient as StrikethroughFeatureClient_e70f5e05f09f93
 import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { AvatarUtilisateur as AvatarUtilisateur_b9a117c96b3f4963613d91b930ea144b } from '../../../components/admin/AvatarUtilisateur'
+import { Icon as Icon_dfe4008080d895d460898c3a6155e9ba } from '../../../components/admin/Icon'
+import { Logo as Logo_91a09b539d3c86b0aebf520e7564ce08 } from '../../../components/admin/Logo'
+import { MenuCompte as MenuCompte_03e6ba131ac197cfc1362ae1cee939a6 } from '../../../components/admin/MenuCompte'
+import { PiedDePage as PiedDePage_00af865bf2a9e060ba67cefa58103378 } from '../../../components/admin/PiedDePage'
+import { TableauDeBord as TableauDeBord_094e17e2e67dcd7198efc4269aecfac5 } from '../../../components/admin/TableauDeBord'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -48,5 +54,11 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#UnderlineFeatureClient": UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "/components/admin/AvatarUtilisateur#AvatarUtilisateur": AvatarUtilisateur_b9a117c96b3f4963613d91b930ea144b,
+  "/components/admin/Icon#Icon": Icon_dfe4008080d895d460898c3a6155e9ba,
+  "/components/admin/Logo#Logo": Logo_91a09b539d3c86b0aebf520e7564ce08,
+  "/components/admin/MenuCompte#MenuCompte": MenuCompte_03e6ba131ac197cfc1362ae1cee939a6,
+  "/components/admin/PiedDePage#PiedDePage": PiedDePage_00af865bf2a9e060ba67cefa58103378,
+  "/components/admin/TableauDeBord#TableauDeBord": TableauDeBord_094e17e2e67dcd7198efc4269aecfac5,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

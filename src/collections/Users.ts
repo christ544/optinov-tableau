@@ -7,6 +7,7 @@ export const Users: CollectionConfig = {
     plural: 'Utilisateurs',
   },
   admin: {
+    group: 'Administration',
     useAsTitle: 'email',
     description: 'Les personnes autorisées à se connecter au tableau de bord.',
   },

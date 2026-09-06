@@ -7,6 +7,7 @@ export const Media: CollectionConfig = {
     plural: 'Médias (images)',
   },
   admin: {
+    group: 'Bibliothèque',
     description: 'Toutes les images téléversées (couvertures, illustrations…).',
   },
   access: {

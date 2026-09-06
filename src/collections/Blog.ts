@@ -10,6 +10,19 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)+/g, '')
 
+/*
+  Les catégories du blog. Exportées pour que le tableau de bord d'accueil
+  affiche le libellé lisible (« Marketing digital ») et non la valeur stockée
+  (« marketing-digital »).
+*/
+export const CATEGORIES_BLOG = [
+  { label: 'Communication & branding', value: 'branding' },
+  { label: 'Marketing digital', value: 'marketing-digital' },
+  { label: 'Intelligence artificielle & automatisation', value: 'ia' },
+  { label: 'Carte de visite digitale & networking', value: 'carte-digitale' },
+  { label: 'Coulisses & actualités', value: 'agence' },
+] as const
+
 export const Blog: CollectionConfig = {
   slug: 'blog',
   labels: {
@@ -17,6 +30,7 @@ export const Blog: CollectionConfig = {
     plural: 'Articles du blog',
   },
   admin: {
+    group: 'Contenus',
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'categorie', 'date', 'aLaUne'],
     description: 'Créez, modifiez et illustrez vos articles de blog.',
@@ -58,13 +72,7 @@ export const Blog: CollectionConfig = {
       type: 'select',
       label: 'Catégorie',
       defaultValue: 'agence',
-      options: [
-        { label: 'Communication & branding', value: 'branding' },
-        { label: 'Marketing digital', value: 'marketing-digital' },
-        { label: 'Intelligence artificielle & automatisation', value: 'ia' },
-        { label: 'Carte de visite digitale & networking', value: 'carte-digitale' },
-        { label: 'Coulisses & actualités', value: 'agence' },
-      ],
+      options: [...CATEGORIES_BLOG],
     },
     {
       name: 'date',
