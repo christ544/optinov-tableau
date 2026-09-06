@@ -120,6 +120,27 @@ Les appels sont regroupés : le hook ne part que deux minutes après le dernier
 enregistrement, pour qu'une session de saisie ne déclenche qu'une seule
 reconstruction et non une par clic sur « Enregistrer ».
 
+## Demandes du site et e-mails
+
+Les formulaires du site (contact, devis service, devis flotte PROS.CARDS, rappel)
+envoient chaque message dans la rubrique **Demandes** du tableau de bord, par
+`POST /api/demandes`. Le dépôt est public, la lecture réservée aux personnes
+connectées : personne ne peut relire les demandes sans compte. Une même
+personne ne peut pas déposer plus de cinq demandes en dix minutes, et le champ
+piège des formulaires écarte les robots.
+
+À chaque demande, deux e-mails partent : une **alerte** à `ALERTES_EMAIL` avec
+le téléphone en première ligne et un lien vers la fiche, et un **accusé de
+réception** au prospect s'il a laissé une adresse. L'envoi passe par le Gmail
+de l'agence (`SMTP_HOST=smtp.gmail.com`, port 465, `SMTP_USER` = l'adresse,
+`SMTP_PASS` = un mot de passe d'application Google, jamais le mot de passe du
+compte). Sans `SMTP_HOST`, rien n'est envoyé et les messages s'affichent dans la
+console : c'est le mode du développement local. Un échec d'envoi ne perd jamais
+la demande, qui reste consultable dans le tableau de bord.
+
+L'accueil du tableau de bord met en avant les demandes en attente depuis plus
+de 24 heures : un prospect qui attend plus d'un jour est un prospect perdu.
+
 ## Comptes et sécurité
 
 Deux rôles :

@@ -64,8 +64,13 @@ async function main() {
   const log = (m: string) => payload.logger.info(m)
 
   // ------------------------------------------------ Nettoyage des démos passées
-  for (const collection of ['blog', 'realisations', 'temoignages', 'equipe', 'faq'] as const) {
-    const champ = collection === 'temoignages' || collection === 'equipe' ? 'nom' : collection === 'faq' ? 'question' : 'titre'
+  for (const collection of ['blog', 'realisations', 'temoignages', 'equipe', 'faq', 'demandes'] as const) {
+    const champ =
+      collection === 'temoignages' || collection === 'equipe' || collection === 'demandes'
+        ? 'nom'
+        : collection === 'faq'
+          ? 'question'
+          : 'titre'
     const { docs } = await payload.delete({ collection, where: { [champ]: { contains: DEMO } } })
     if (docs.length) log(`${collection} : ${docs.length} contenu(s) de démo supprimé(s)`)
   }
@@ -235,6 +240,36 @@ async function main() {
     },
   })
   log('2 articles créés')
+
+  // --------------------------------------------------------------- Demandes
+  await payload.create({
+    collection: 'demandes',
+    data: {
+      typeFormulaire: 'devis-service',
+      nom: `${DEMO} Yao Kouamé`,
+      telephone: '+225 07 11 22 33 44',
+      email: 'yao@exemple.ci',
+      service: 'communication-visuelle',
+      budget: '500 000 – 2 000 000 FCFA',
+      message: 'Nous voulons refaire notre logo et nos supports avant le salon de novembre.',
+      pageSource: '/services/communication-visuelle',
+      consentement: true,
+      statutTraitement: 'nouveau',
+    },
+  })
+  await payload.create({
+    collection: 'demandes',
+    data: {
+      typeFormulaire: 'rappel',
+      nom: `${DEMO} Fatou Bamba`,
+      telephone: '+225 05 66 77 88 99',
+      creneau: 'Matin (8h–12h)',
+      pageSource: '/solutions/pros-cards',
+      consentement: true,
+      statutTraitement: 'nouveau',
+    },
+  })
+  log('2 demandes créées')
 
   log('Démonstration prête. Lancez la synchronisation du site : DASHBOARD_URL=http://localhost:3000 node scripts/sync-content.mjs')
   process.exit(0)

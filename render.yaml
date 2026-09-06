@@ -35,3 +35,14 @@ services:
         sync: false
       - key: SITE_DEPLOY_HOOK # URL du Deploy Hook Cloudflare Pages du site vitrine
         sync: false
+      # E-mails (Gmail de l agence, mot de passe d application) : alertes de demandes.
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: ALERTES_EMAIL
+        sync: false

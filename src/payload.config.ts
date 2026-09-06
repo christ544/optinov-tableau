@@ -1,5 +1,6 @@
 import path from 'path'
 import { postgresAdapter } from '@payloadcms/db-postgres'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -12,6 +13,7 @@ import { migrations } from './migrations'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Blog } from './collections/Blog'
+import { Demandes } from './collections/Demandes'
 import { Equipe } from './collections/Equipe'
 import { Faq } from './collections/Faq'
 import { Realisations } from './collections/Realisations'
@@ -149,6 +151,8 @@ export default buildConfig({
     Temoignages,
     Equipe,
     Faq,
+    // Commercial
+    Demandes,
     // Bibliothèque
     Media,
     // Administration
@@ -179,6 +183,35 @@ export default buildConfig({
       },
     },
   },
+  /*
+    ---------------------------------------------------------------- E-MAIL
+
+    À quoi cela sert : prévenir l'agence dès qu'une demande arrive depuis le
+    site, accuser réception au prospect, et faire fonctionner « mot de passe
+    oublié ». Envoi par le Gmail de l'agence : SMTP_HOST=smtp.gmail.com,
+    SMTP_PORT=465, SMTP_USER=l'adresse Gmail, SMTP_PASS=un « mot de passe
+    d'application » (jamais le mot de passe du compte).
+
+    ACTIVATION CONDITIONNELLE. Sans SMTP_HOST, aucun adaptateur : Payload écrit
+    les e-mails dans la console. C'est ce qu'on veut en développement, où
+    personne ne souhaite qu'un essai expédie un vrai message à un vrai prospect.
+  */
+  ...(process.env.SMTP_HOST
+    ? {
+        email: nodemailerAdapter({
+          defaultFromAddress: process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@optinov.ci',
+          defaultFromName: 'OPTINOV',
+          transportOptions: {
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT) || 465,
+            // 465 impose TLS dès la connexion ; 587 commence en clair puis bascule (STARTTLS).
+            secure: (Number(process.env.SMTP_PORT) || 465) === 465,
+            auth: { user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '' },
+          },
+        }),
+      }
+    : {}),
+
   /*
     GRAPHQL DÉSACTIVÉ. Payload expose par défaut une API GraphQL en plus du
     REST, avec son introspection accessible sans authentification : une

@@ -72,6 +72,7 @@ export interface Config {
     temoignages: Temoignage;
     equipe: Equipe;
     faq: Faq;
+    demandes: Demande;
     media: Media;
     users: User;
     'payload-kv': PayloadKv;
@@ -86,6 +87,7 @@ export interface Config {
     temoignages: TemoignagesSelect<false> | TemoignagesSelect<true>;
     equipe: EquipeSelect<false> | EquipeSelect<true>;
     faq: FaqSelect<false> | FaqSelect<true>;
+    demandes: DemandesSelect<false> | DemandesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -365,6 +367,38 @@ export interface Faq {
   createdAt: string;
 }
 /**
+ * Les messages envoyés depuis les formulaires du site.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "demandes".
+ */
+export interface Demande {
+  id: number;
+  typeFormulaire: 'contact' | 'devis-service' | 'devis-flotte' | 'rappel';
+  nom: string;
+  telephone: string;
+  email?: string | null;
+  entreprise?: string | null;
+  sujet?: string | null;
+  service?: string | null;
+  budget?: string | null;
+  effectif?: string | null;
+  creneau?: string | null;
+  message?: string | null;
+  pageSource?: string | null;
+  /**
+   * Sans consentement explicite, la demande ne doit pas être enregistrée.
+   */
+  consentement: boolean;
+  statutTraitement: 'nouveau' | 'en-cours' | 'traite';
+  /**
+   * Non visible du prospect : compte rendu d’appel, suite donnée…
+   */
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Les personnes autorisées à se connecter au tableau de bord.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -436,6 +470,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'faq';
         value: number | Faq;
+      } | null)
+    | ({
+        relationTo: 'demandes';
+        value: number | Demande;
       } | null)
     | ({
         relationTo: 'media';
@@ -592,6 +630,29 @@ export interface FaqSelect<T extends boolean = true> {
   question?: T;
   reponse?: T;
   ordre?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "demandes_select".
+ */
+export interface DemandesSelect<T extends boolean = true> {
+  typeFormulaire?: T;
+  nom?: T;
+  telephone?: T;
+  email?: T;
+  entreprise?: T;
+  sujet?: T;
+  service?: T;
+  budget?: T;
+  effectif?: T;
+  creneau?: T;
+  message?: T;
+  pageSource?: T;
+  consentement?: T;
+  statutTraitement?: T;
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

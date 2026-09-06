@@ -28,12 +28,14 @@ import React from 'react'
 
 import { CATEGORIES_BLOG } from '../../collections/Blog'
 import { EMPLACEMENTS, SERVICES } from '../../globals/ServiceImages'
-import { tempsRelatif, tendance } from '../../lib/format'
+import { libelleFormulaire, libelleStatut } from '../../lib/demandes'
+import { initiales, tempsRelatif, tendance } from '../../lib/format'
 import {
   IconeArticle,
   IconeBrouillon,
   IconeChantier,
   IconeCrayon,
+  IconeDemandes,
   IconeEclair,
   IconePlus,
   IconeReglages,
@@ -152,6 +154,39 @@ const PastilleUne: React.FC = () => (
   </span>
 )
 
+/* Pastille de statut d'une demande : la forme (point) renseigne autant que la teinte. */
+const TONS_STATUT: Record<string, { fond: string; texte: string }> = {
+  nouveau: { fond: '#ffe7d3', texte: '#c24d03' },
+  'en-cours': { fond: '#e8ecf5', texte: '#0f1e3d' },
+  traite: { fond: '#e3f1e8', texte: '#2e7d4f' },
+}
+const PastilleStatut: React.FC<{ valeur?: null | string }> = ({ valeur }) => {
+  const ton = TONS_STATUT[valeur ?? 'nouveau'] ?? TONS_STATUT.nouveau
+  return (
+    <span className="op-pastille" style={{ background: ton.fond, color: ton.texte }}>
+      <span aria-hidden="true" className="op-pastille__point" />
+      {libelleStatut(valeur)}
+    </span>
+  )
+}
+
+/* Rond d'initiales, pour donner un point d'ancrage visuel à chaque ligne. */
+const Rond: React.FC<{ courriel?: null | string; nom?: null | string }> = ({ courriel, nom }) => (
+  <span aria-hidden="true" className="op-rond">
+    {initiales(nom, courriel)}
+  </span>
+)
+
+type DemandeResume = {
+  createdAt?: null | string
+  email?: null | string
+  id: number | string
+  nom: string
+  statutTraitement?: null | string
+  telephone: string
+  typeFormulaire?: null | string
+}
+
 const libelleCategorie = (valeur?: null | string): string =>
   CATEGORIES_BLOG.find((c) => c.value === valeur)?.label ?? ''
 
@@ -183,6 +218,7 @@ type Tache = { href: string; libelle: string; reste: number }
 */
 async function chargerTableau(payload: any, user: any) {
   const maintenant = Date.now()
+  const ilYA24h = new Date(maintenant - JOUR).toISOString()
   const ilYA30j = new Date(maintenant - 30 * JOUR).toISOString()
   const ilYA60j = new Date(maintenant - 60 * JOUR).toISOString()
 
@@ -212,6 +248,10 @@ async function chargerTableau(payload: any, user: any) {
     medias30jPrec,
     realisations,
     realisationsPubliees,
+    demandesNouvelles,
+    demandesEnRetard,
+    demandes30j,
+    demandes30jPrec,
   ] = await Promise.all([
     compter('blog', {}),
     compter('blog', { aLaUne: { equals: true } }),
@@ -224,7 +264,25 @@ async function chargerTableau(payload: any, user: any) {
     compter('media', surLes30JoursPrecedents),
     compter('realisations', {}),
     compter('realisations', { publiee: { equals: true } }),
+    compter('demandes', { statutTraitement: { equals: 'nouveau' } }),
+    /*
+      « en retard » : encore « nouveau » et reçue il y a plus de 24 h. C'est LE
+      chiffre qui doit sauter aux yeux : un prospect qui attend depuis plus d'un
+      jour est un prospect perdu.
+    */
+    compter('demandes', { and: [{ statutTraitement: { equals: 'nouveau' } }, { createdAt: { less_than: ilYA24h } }] }),
+    compter('demandes', surLes30DerniersJours),
+    compter('demandes', surLes30JoursPrecedents),
   ])
+
+  /* Les cinq dernières demandes, pour agir sans naviguer. */
+  let dernieresDemandes: DemandeResume[] = []
+  try {
+    const resultat = await payload.find({ collection: 'demandes', depth: 0, limit: 5, sort: '-createdAt' })
+    dernieresDemandes = resultat.docs as DemandeResume[]
+  } catch {
+    dernieresDemandes = []
+  }
 
   /*
     Les illustrations des pages Services : pour chaque service, combien des
@@ -271,6 +329,16 @@ async function chargerTableau(payload: any, user: any) {
   */
   const taches: Tache[] = [
     {
+      href: '/admin/collections/demandes?where[statutTraitement][equals]=nouveau',
+      libelle: 'Rappeler les demandes en attente depuis plus de 24 h',
+      reste: demandesEnRetard,
+    },
+    {
+      href: '/admin/collections/demandes?where[statutTraitement][equals]=nouveau',
+      libelle: 'Traiter les nouvelles demandes',
+      reste: Math.max(0, demandesNouvelles - demandesEnRetard),
+    },
+    {
       href: '/admin/globals/service-images',
       libelle: 'Compléter les illustrations des pages Services',
       reste: servicesIncomplets,
@@ -299,7 +367,12 @@ async function chargerTableau(payload: any, user: any) {
     articlesALaUne,
     articlesSansImage,
     dateDuJour,
+    demandes30j,
+    demandes30jPrec,
+    demandesEnRetard,
+    demandesNouvelles,
     derniersArticles,
+    dernieresDemandes,
     emplacementsManquants,
     etatServices,
     maintenant,
@@ -345,8 +418,26 @@ export const TableauDeBord = async (props: any) => {
       <div className="op-tuiles">
         <Tuile
           alerte
-          href="/admin/globals/service-images"
+          href="/admin/collections/demandes?where[statutTraitement][equals]=nouveau"
           icone={<IconeRetard taille={19} />}
+          label="Demandes en attente depuis + de 24 h"
+          pied={
+            d.demandesNouvelles > 0
+              ? { legende: 'des demandes non traitées', max: d.demandesNouvelles, type: 'barre', valeur: d.demandesEnRetard }
+              : { type: 'aucun' }
+          }
+          valeur={d.demandesEnRetard}
+        />
+        <Tuile
+          href="/admin/collections/demandes?where[statutTraitement][equals]=nouveau"
+          icone={<IconeDemandes taille={19} />}
+          label="Nouvelles demandes"
+          pied={{ actuel: d.demandes30j, periode: 'sur 30 jours', precedent: d.demandes30jPrec, type: 'tendance' }}
+          valeur={d.demandesNouvelles}
+        />
+        <Tuile
+          href="/admin/globals/service-images"
+          icone={<IconeBrouillon taille={19} />}
           label="Illustrations manquantes sur les pages Services"
           pied={{
             legende: 'des emplacements à remplir',
@@ -424,6 +515,42 @@ export const TableauDeBord = async (props: any) => {
 
       {/* --------------------------- Deux listes + le panneau des raccourcis */}
       <div className="op-grille">
+        {/* ------------------------------------------- Dernières demandes */}
+        <section className="op-carte">
+          <div className="op-carte__entete">
+            <h2 className="op-carte__titre">Dernières demandes</h2>
+            <Link className="op-carte__lien" href="/admin/collections/demandes">
+              Tout voir
+            </Link>
+          </div>
+
+          {d.dernieresDemandes.length === 0 ? (
+            <p className="op-vide">Aucune demande pour l’instant.</p>
+          ) : (
+            <ul className="op-liste">
+              {d.dernieresDemandes.map((dem) => (
+                <li className="op-ligne" key={dem.id}>
+                  <Rond courriel={dem.email} nom={dem.nom} />
+                  <Link className="op-ligne__corps" href={`/admin/collections/demandes/${dem.id}`}>
+                    <span className="op-ligne__haut">
+                      <span className="op-ligne__nom">{dem.nom}</span>
+                      {dem.createdAt && (
+                        <span className="op-ligne__date">{tempsRelatif(dem.createdAt, d.maintenant)}</span>
+                      )}
+                    </span>
+                    <span className="op-ligne__meta">
+                      {libelleFormulaire(dem.typeFormulaire)} · {dem.telephone}
+                    </span>
+                  </Link>
+                  <span className="op-ligne__fin">
+                    <PastilleStatut valeur={dem.statutTraitement} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         {/* ------------------------------------------- Derniers articles */}
         <section className="op-carte">
           <div className="op-carte__entete">
