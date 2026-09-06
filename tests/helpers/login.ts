@@ -11,7 +11,9 @@ export interface LoginOptions {
 }
 
 /**
- * Logs the user into the admin panel via the login page.
+ * Connecte un utilisateur au tableau de bord par la page de connexion,
+ * puis attend l'affichage de l'accueil (libellé « Tableau de bord » dans
+ * la navigation, l'interface étant en français).
  */
 export async function login({
   page,
@@ -26,6 +28,6 @@ export async function login({
 
   await page.waitForURL(`${serverURL}/admin`)
 
-  const dashboardArtifact = page.locator('span[title="Dashboard"]')
-  await expect(dashboardArtifact).toBeVisible()
+  const accueil = page.locator('span[title="Tableau de bord"]')
+  await expect(accueil).toBeVisible()
 }

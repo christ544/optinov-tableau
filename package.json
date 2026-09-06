@@ -1,38 +1,29 @@
 {
-  "name": "optinov-backend",
+  "name": "optinov-tableau",
   "version": "1.0.0",
-  "description": "A blank template to get started with Payload 3.0",
-  "license": "MIT",
+  "description": "Tableau de bord du site vitrine OPTINOV (agence de communication) - Payload CMS + PostgreSQL",
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build --webpack",
-    "deploy": "npm run deploy:database && npm run deploy:app",
-    "deploy:app": "opennextjs-cloudflare build --env=$CLOUDFLARE_ENV && opennextjs-cloudflare deploy --env=$CLOUDFLARE_ENV",
-    "deploy:database": "cross-env NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate && wrangler d1 execute D1 --command 'PRAGMA optimize' --env=$CLOUDFLARE_ENV --remote",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
-    "devsafe": "rm -rf .next && rm -rf .open-next && cross-env NODE_OPTIONS=--no-deprecation next dev",
-    "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
-    "generate:types": "npm run generate:types:cloudflare && npm run generate:types:payload",
-    "generate:types:cloudflare": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "generate:types:payload": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
-    "ii": "pnpm install --ignore-workspace",
-    "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
-    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview --env=$CLOUDFLARE_ENV",
+    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build --webpack",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
-    "test": "pnpm run test:int && pnpm run test:e2e",
-    "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
-    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts"
+    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
+    "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:create",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
+    "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
+    "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
+    "test": "npm run test:int && npm run test:e2e",
+    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts",
+    "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "1.20.1",
-    "@payloadcms/db-d1-sqlite": "3.88.0",
-    "@payloadcms/db-mongodb": "^3.88.0",
-    "@payloadcms/db-postgres": "^3.88.0",
+    "@payloadcms/db-postgres": "3.88.0",
     "@payloadcms/next": "3.88.0",
-    "@payloadcms/plugin-cloud-storage": "^3.88.0",
+    "@payloadcms/plugin-cloud-storage": "3.88.0",
     "@payloadcms/richtext-lexical": "3.88.0",
-    "@payloadcms/storage-r2": "3.88.0",
+    "@payloadcms/translations": "3.88.0",
     "@payloadcms/ui": "3.88.0",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
@@ -44,7 +35,6 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.2.0",
     "@playwright/test": "1.58.2",
     "@testing-library/react": "16.3.0",
     "@types/node": "22.19.9",
@@ -58,25 +48,10 @@
     "tsx": "4.22.4",
     "typescript": "5.7.3",
     "vite-tsconfig-paths": "6.0.5",
-    "vitest": "4.0.18",
-    "wrangler": "~4.116.0"
+    "vitest": "4.0.18"
   },
   "engines": {
-    "node": "^18.20.2 || >=20.9.0",
-    "pnpm": "^9 || ^10 || ^11"
+    "node": "22.x"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp",
-      "esbuild",
-      "unrs-resolver"
-    ]
-  },
-  "cloudflare": {
-    "bindings": {
-      "PAYLOAD_SECRET": {
-        "description": "Generate a random string using `openssl rand -hex 32`"
-      }
-    }
-  }
+  "private": true
 }
