@@ -1,0 +1,5 @@
+# Les scripts shell partent sur un serveur Linux : ils doivent garder des fins de
+# ligne LF, meme prepares depuis Windows (ou Git convertit tout en CRLF par
+# defaut). Un deployer.sh en CRLF echoue des sa premiere ligne, sur un message
+# incomprehensible du genre "/bin/bash^M: bad interpreter: No such file".
+*.sh text eol=lf

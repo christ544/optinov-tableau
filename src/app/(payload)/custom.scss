@@ -1,0 +1,2095 @@
+/*
+  CHARTE OPTINOV APPLIQUEE AU BACK-OFFICE.
+
+  Couleurs reprises du site vitrine (src/app/globals.css) :
+    bleu marine #0f1e3d (principale) et orange #fc6303 (accent).
+  Typographie de titre reprise du site : Playfair Display.
+
+  REGLE ABSOLUE TENUE ICI : aucune couleur nouvelle n'est introduite. Toutes les
+  nuances ajoutees (survols, fonds de pastilles, filets, ombres) sont soit une
+  variante plus claire ou plus foncee des memes teintes, soit ces memes teintes
+  posees en transparence — rgba(15,30,61,.06) est du bleu marine a 6 %, pas un
+  gris. C'est ce qui permet d'enrichir le dessin sans deriver de la marque.
+
+  A COMPRENDRE — COMMENT ON HABILLE PAYLOAD SANS LE REECRIRE.
+  Payload ne construit pas son interface avec des couleurs ecrites en dur, mais
+  avec des VARIABLES CSS (--theme-bg, --theme-elevation-500...). On redefinit
+  donc quelques variables, et toute l'interface suit. C'est la logique des
+  « tokens » du design system du site — un seul endroit de verite.
+
+  ET POURQUOI PAS BESOIN DE `!important` ?
+  Depuis Payload 3.8x, toutes ses regles sont enfermees dans une couche CSS
+  (`@layer payload-default`). Or une regle SANS couche l'emporte toujours sur
+  une regle EN couche, quelle que soit sa specificite. Ce fichier n'ayant pas de
+  `@layer`, il gagne par construction. C'est plus sain qu'une guerre de
+  `!important` : si demain une de nos regles doit ceder, il suffira de la
+  deplacer dans une couche.
+
+  A RETENIR AUSSI : ce dashboard reste un OUTIL DE TRAVAIL, pas une vitrine.
+  Il affiche des tableaux denses et des formulaires longs, parce que son metier
+  est de faire saisir 30 champs sans erreur — pas de seduire en 5 secondes.
+  On lui donne la MARQUE d'OPTINOV et de l'air, pas la mise en scene du site.
+*/
+
+/* La serif des titres du site vitrine. */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&display=swap');
+
+/* ========================================================================== */
+/* 1. JETONS — la seule source de verite des couleurs, rayons et ombres.      */
+/* ========================================================================== */
+
+:root {
+  /* --- Palette OPTINOV, inchangee ------------------------------------- */
+  --optinov-marine: #0f1e3d;
+  --optinov-marine-900: #0a1730; // le fond du degrade d'accueil
+  --optinov-marine-800: #1c2f5a;
+  --optinov-marine-700: #3b4d70;
+  --optinov-orange: #fc6303;
+  --optinov-orange-fonce: #c24d03; // contraste AA sur blanc
+  --optinov-creme: #fafbfc;
+  --optinov-vert: #2e7d4f; // le vert des statuts « publie » / « traite »
+
+  /* --- Encres et filets ----------------------------------------------- */
+  --optinov-encre: #5b616e;
+  --optinov-encre-claire: #9fabc2;
+  --optinov-trait: #e2e6ee;
+  --optinov-trait-doux: #f2f4f8;
+
+  /*
+    LE FILET A 1 px PLUTOT QUE L'OMBRE DURE.
+    Un contour de bleu marine a 8 % delimite une carte aussi surement qu'une
+    ombre portee, mais sans salir le fond creme. Les ombres, elles, ne servent
+    plus qu'a exprimer l'ELEVATION (ce qui flotte : menus, survols).
+  */
+  --optinov-bordure: rgba(15, 30, 61, 0.09);
+  --optinov-bordure-fine: rgba(15, 30, 61, 0.06);
+
+  /* Rayons : ceux du site vitrine, plus un cran superieur pour les cartes. */
+  --optinov-radius-sm: 6px;
+  --optinov-radius: 8px;
+  --optinov-radius-md: 12px;
+  --optinov-radius-lg: 14px;
+  --optinov-radius-xl: 18px;
+  --optinov-radius-pilule: 999px;
+
+  /* Ombres : toutes teintees de bleu marine, jamais de noir pur (qui grise). */
+  --optinov-ombre-douce: 0 1px 2px rgba(15, 30, 61, 0.05);
+  --optinov-shadow-card: 0 1px 3px rgba(15, 30, 61, 0.06), 0 8px 24px rgba(15, 30, 61, 0.05);
+  --optinov-shadow-lift: 0 8px 20px rgba(15, 30, 61, 0.1), 0 20px 48px rgba(15, 30, 61, 0.08);
+  --optinov-ombre-menu: 0 12px 32px rgba(15, 30, 61, 0.16), 0 2px 6px rgba(15, 30, 61, 0.08);
+
+  /* Une seule courbe d'animation pour tout le back-office. */
+  --optinov-transition: 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* --- On rebranche les variables de Payload sur notre palette --------- */
+  --theme-bg: var(--optinov-creme); // fond general : le creme du site
+  --theme-success-500: var(--optinov-marine-700);
+
+  /* Anneau de focus clavier : orange, tres visible (accessibilite) */
+  --accent-color: var(--optinov-orange);
+
+  /* La barre laterale gagne quelques pixels : elle porte desormais des icones. */
+  --nav-width: 286px;
+}
+
+/* Le fond creme du site vitrine, partout. */
+body {
+  background-color: var(--optinov-creme);
+}
+
+/* ========================================================================== */
+/* 2. LES ICONES DE LA BARRE LATERALE                                        */
+/* ========================================================================== */
+
+/*
+  COMMENT ON AJOUTE UNE ICONE A UN MENU QU'ON N'ECRIT PAS.
+
+  Les liens de la navigation sont fabriques par Payload : on ne peut pas y
+  glisser un composant React sans remplacer TOUTE la navigation, et donc
+  reprendre a notre charge les groupes, les permissions, les traductions et
+  l'etat plie/deplie. Beaucoup trop cher pour quinze dessins.
+
+  Heureusement, Payload donne a chaque entree un identifiant stable et
+  previsible : `#nav-blog`, `#nav-media`, `#nav-global-service-images` pour les
+  liens ; `#nav-group-Contenus` pour les titres de rubrique. On accroche donc
+  l'icone a un pseudo-element `::before`, et on choisit le dessin par
+  identifiant.
+
+  LE DESSIN EST UN MASQUE, PAS UNE IMAGE. `mask-image` decoupe un aplat de
+  `currentColor` a la forme du SVG : l'icone prend donc AUTOMATIQUEMENT la
+  couleur du texte — blanc au repos, blanc franc au survol, sans jamais avoir a
+  fabriquer trois variantes du fichier.
+
+  Les `<` et `>` du SVG sont ecrits `%3C` / `%3E`. Un `url()` cite les accepte
+  tels quels, mais l'encodage traverse sans risque tous les minificateurs CSS.
+*/
+
+@function icone($traces) {
+  $corps: '';
+  @each $trace in $traces {
+    $corps: $corps + "%3Cpath d='" + $trace + "'/%3E";
+  }
+  @return url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E" + $corps + '%3C/svg%3E');
+}
+
+/* Les rubriques (les titres depliables de la barre laterale). */
+$icones-groupes: (
+  'nav-group-Contenus': (
+    'm12 3 9 4.5-9 4.5-9-4.5 9-4.5Z',
+    'm3 12 9 4.5 9-4.5',
+    'm3 16.5 9 4.5 9-4.5'
+  ),
+  'nav-group-Commercial': ('M22 7 13.5 15.5l-4-4L2 19', 'M16 7h6v6'),
+  'nav-group-Bibliothèque': (
+    'M3 7.5V19a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 19V9a1.5 1.5 0 0 0-1.5-1.5h-7L10 4.5H4.5A1.5 1.5 0 0 0 3 6v1.5Z'
+  ),
+  'nav-group-Administration': ('M12 3 5 6v5.5c0 4.4 3 8.2 7 9.5 4-1.3 7-5.1 7-9.5V6l-7-3Z'),
+);
+
+/* Les entrees de menu, une par collection. */
+$icones-liens: (
+  'nav-blog': (
+    'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z',
+    'M14 3v5h5',
+    'M9 13h6M9 17h4'
+  ),
+  'nav-realisations': (
+    'M7 9a5 5 0 1 0 10 0a5 5 0 1 0-10 0',
+    'm8.5 13.5-1 7.5 4.5-2.5 4.5 2.5-1-7.5'
+  ),
+  'nav-temoignages': (
+    'M21 14a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z',
+    'M8 9.5h8M8 12.5h5'
+  ),
+  'nav-equipe': (
+    'M15 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 3 18.5V20',
+    'M5.2 7.5a3.8 3.8 0 1 0 7.6 0a3.8 3.8 0 1 0-7.6 0',
+    'M21 20v-1.5a4.5 4.5 0 0 0-3.2-4.3',
+    'M15.5 4.2a3.8 3.8 0 0 1 0 6.6'
+  ),
+  'nav-faq': (
+    'M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0',
+    'M9.6 9.5a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.4',
+    'M12 17h.01'
+  ),
+  'nav-demandes': (
+    'M4.5 5.5h15l1.5 6.5v6a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18v-6Z',
+    'M3 12h5l2 3h4l2-3h5'
+  ),
+  'nav-global-service-images': (
+    'M4 4h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z',
+    'M4 14h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z'
+  ),
+  'nav-media': (
+    'M4 4.5h16a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18V6A1.5 1.5 0 0 1 4 4.5Z',
+    'M6.5 9.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0',
+    'm3 17 5-4.5 4 3.5 3-2 6 5'
+  ),
+  'nav-users': (
+    'M6.2 8a3.8 3.8 0 1 0 7.6 0a3.8 3.8 0 1 0-7.6 0',
+    'M3 20.5v-.5a5 5 0 0 1 5-5h3',
+    'M18 14.5v6M15 17.5h6'
+  ),
+  'nav-global-parametres': (
+    'M5 21v-7M5 10V3M12 21v-9M12 8V3M19 21v-5M19 12V3',
+    'M2.5 14h5M9.5 8h5M16.5 16h5'
+  ),
+);
+
+/* ========================================================================== */
+/* 3. BARRE LATERALE — le bleu marine du site, comme l'en-tete du vitrine.   */
+/* ========================================================================== */
+
+.nav {
+  background-color: var(--optinov-marine);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+
+  /* Un halo tres large de marine clair en haut : la barre cesse d'etre un
+     aplat mort sans qu'aucune couleur nouvelle n'apparaisse. */
+  background-image: radial-gradient(
+    120% 55% at 0% 0%,
+    rgba(16, 96, 106, 0.55) 0%,
+    rgba(15, 30, 61, 0) 62%
+  );
+}
+
+.nav__scroll {
+  --nav-padding-inline-start: 0.9rem;
+  --nav-padding-inline-end: 0.9rem;
+  padding-bottom: 4.5rem; // la place du bouton de deconnexion, ancre en bas
+  gap: 0.15rem;
+}
+
+/* ------------------------------------------------- Les titres de rubrique */
+
+.nav-group {
+  width: 100%;
+  margin-bottom: 1.1rem;
+}
+
+.nav-group__toggle {
+  align-items: center;
+  border-radius: var(--optinov-radius-sm);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  font-weight: 600;
+  gap: 0.6rem;
+  letter-spacing: 0.13em;
+  margin-bottom: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  text-transform: uppercase;
+  transition: color var(--optinov-transition), background-color var(--optinov-transition);
+
+  &:hover,
+  &:focus-visible {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* L'icone de la rubrique. */
+  &::before {
+    background-color: currentColor;
+    content: '';
+    flex-shrink: 0;
+    height: 15px;
+    mask: var(--optinov-ico) center / contain no-repeat;
+    -webkit-mask: var(--optinov-ico) center / contain no-repeat;
+    width: 15px;
+  }
+
+  /* Le libelle prend toute la place restante, le chevron file a droite. */
+  .nav-group__label {
+    flex: 1;
+    margin-inline-end: auto;
+  }
+}
+
+/* Le chevron : discret, et il tourne au lieu de sauter. */
+.nav-group__indicator {
+  opacity: 0.55;
+  transition: transform var(--optinov-transition), opacity var(--optinov-transition);
+
+  svg .stroke {
+    stroke: currentColor;
+  }
+}
+
+.nav-group__toggle:hover .nav-group__indicator {
+  opacity: 1;
+}
+
+.nav-group--collapsed .nav-group__indicator {
+  transform: rotate(-180deg);
+}
+
+/*
+  Chaque rubrique recoit son dessin.
+
+  On ecrit bien un SELECTEUR D'IDENTIFIANT (`#nav-group-Contenus`) et non un
+  selecteur d'attribut (`[id='...']`). Sass « normalise » les seconds en
+  retirant les guillemets — ce qui donnait `[id=nav-group-Bibliothèque]`, dont
+  la validite depend alors de la tolerance de chaque analyseur aux caracteres
+  accentues non echappes. Le selecteur d'identifiant ne pose pas la question.
+*/
+@each $cle, $traces in $icones-groupes {
+  ##{$cle} {
+    --optinov-ico: #{icone($traces)};
+  }
+}
+
+/* ------------------------------------------------------ Les liens du menu */
+
+.nav__link {
+  /*
+    Valeurs par defaut. Elles comptent : une collection ajoutee demain sans
+    icone declaree affichera un petit point neutre — jamais un carre plein,
+    qui serait le resultat d'un masque manquant.
+  */
+  --optinov-ico: #{icone(('M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z'))};
+  --optinov-badge: none;
+  --optinov-badge-fond: var(--optinov-orange);
+  --optinov-badge-texte: #ffffff;
+
+  align-items: center;
+  border-radius: var(--optinov-radius);
+  color: rgba(255, 255, 255, 0.78);
+  display: flex;
+  font-size: 0.875rem;
+  gap: 0.7rem;
+  line-height: 1.3;
+  margin-block: 1px;
+  padding: 0.52rem 0.7rem;
+  position: relative;
+  transition: background-color var(--optinov-transition), color var(--optinov-transition),
+    box-shadow var(--optinov-transition), transform var(--optinov-transition);
+
+  /* L'icone. */
+  &::before {
+    background-color: currentColor;
+    content: '';
+    flex-shrink: 0;
+    height: 18px;
+    mask: var(--optinov-ico) center / contain no-repeat;
+    -webkit-mask: var(--optinov-ico) center / contain no-repeat;
+    opacity: 0.85;
+    transition: opacity var(--optinov-transition);
+    width: 18px;
+  }
+
+  /*
+    LA PASTILLE DE NOTIFICATION.
+    Son contenu vient d'une variable renseignee a l'execution par le composant
+    serveur BadgesNavigation. Tant que personne ne l'a renseignee, elle vaut
+    `none` : aucun pseudo-element n'est genere, donc aucune pastille vide.
+  */
+  &::after {
+    align-items: center;
+    background: var(--optinov-badge-fond);
+    border-radius: var(--optinov-radius-pilule);
+    color: var(--optinov-badge-texte);
+    content: var(--optinov-badge);
+    display: inline-flex;
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    justify-content: center;
+    line-height: 1;
+    margin-inline-start: auto;
+    min-width: 20px;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .nav__link-label {
+    /* Le libelle peut etre long (« Blocs editoriaux ») : il ne doit ni
+       deborder ni pousser la pastille hors de la barre. */
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/*
+  Chaque entree de menu recoit son dessin. Le selecteur d'identifiant (1,0,0)
+  l'emporte sur le `--optinov-ico` par defaut pose sur `.nav__link` (0,1,0) :
+  l'ordre des regles n'a donc aucune importance ici.
+
+  Une collection ajoutee demain sans entree dans cette table n'est pas un
+  probleme : elle heritera du petit point neutre defini ci-dessus.
+*/
+@each $cle, $traces in $icones-liens {
+  ##{$cle} {
+    --optinov-ico: #{icone($traces)};
+  }
+}
+
+/* Survol : un voile de blanc a 8 %, et un leger glissement vers la droite.
+   Le soulignement par defaut de Payload est supprime — il faisait « lien de
+   page web » la ou l'on attend un onglet d'application. */
+.nav a.nav__link:hover,
+.nav a.nav__link:focus-visible {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  text-decoration: none;
+  transform: translateX(2px);
+
+  &::before {
+    opacity: 1;
+  }
+}
+
+/*
+  L'ETAT ACTIF.
+
+  ATTENTION — PIEGE CORRIGE ICI. L'ancienne feuille ciblait `.nav__link--active`,
+  une classe que Payload N'EMET PLUS depuis la version 3.8x : la regle ne
+  s'appliquait donc a rien, et la rubrique courante n'etait pas signalee.
+  Payload marque desormais le lien actif en lui ajoutant un enfant
+  `.nav__link-indicator` — d'ou le `:has()` ci-dessous. On garde `.active` en
+  second selecteur au cas ou une version future y reviendrait.
+*/
+.nav__link.active,
+.nav__link:has(.nav__link-indicator) {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-weight: 600;
+  /* Le filet orange signature a gauche + un creux interieur tres leger, qui
+     donne l'impression que l'onglet est enfonce plutot que pose. */
+  box-shadow:
+    inset 3px 0 0 0 var(--optinov-orange),
+    inset 0 1px 2px rgba(0, 0, 0, 0.22);
+  padding-inline-start: 0.95rem;
+
+  &::before {
+    opacity: 1;
+  }
+}
+
+/* On masque le marqueur natif : le filet orange le remplace avantageusement. */
+.nav__link-indicator {
+  display: none;
+}
+
+/* -------------------------------------- Bas de barre : reglages, sortie */
+
+.nav__controls {
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 1.25rem;
+
+  button,
+  a {
+    align-items: center;
+    border-radius: var(--optinov-radius);
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.5rem 0.7rem;
+    transition: background-color var(--optinov-transition), color var(--optinov-transition);
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+  }
+}
+
+/*
+  CORRECTION D'UN BUG DE CLIC SUR LE BOUTON DE DECONNEXION.
+
+  Le contenu principal recouvrait le coin bas-gauche de la barre laterale, la ou
+  se trouve le bouton de deconnexion : le clic n'atteignait jamais le lien, on
+  restait donc sur le tableau de bord.
+
+  Plutot que de demeler l'empilement complexe de Payload (grille + overlays), on
+  sort le bouton de deconnexion de ce fouillis : `position: fixed` l'ancre au
+  coin bas-gauche de l'ecran, et un z-index eleve le place au-dessus de tout.
+  Le lien pointe vers /admin/logout, une route qui, elle, a toujours fonctionne.
+
+  VERIFIE (navigateur, desktop >= 1440 px, barre laterale ouverte) : un clic
+  souris reel sur ce bouton mene bien a /admin/logout, efface le cookie de
+  session et renvoie vers la page de connexion. La deconnexion fonctionne.
+
+  A NOTER : quand la barre est repliee, `.nav` passe a `opacity: 0` ET recoit
+  l'attribut `inert`. Le bouton, bien que fixe, devient donc invisible et
+  inatteignable en meme temps qu'elle — il ne flotte jamais au-dessus du
+  contenu. C'est aussi pourquoi le pied de page se decale (voir §9).
+*/
+@media (min-width: 769px) {
+  .nav__log-out {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--optinov-radius);
+    bottom: 0.9rem;
+    left: 0.9rem;
+    position: fixed;
+    z-index: 9999;
+  }
+}
+
+/* ========================================================================== */
+/* 4. EN-TETE — recherche, notifications, compte.                            */
+/* ========================================================================== */
+
+/*
+  Les conteneurs de l'en-tete de Payload rognent ce qui depasse. Le panneau du
+  menu compte, lui, DOIT deborder vers le bas. On leve donc la coupe — sans quoi
+  le menu s'ouvrirait invisible.
+*/
+.app-header,
+.app-header__content,
+.app-header__wrapper,
+.app-header__controls-wrapper,
+.app-header__actions-wrapper,
+.app-header__actions {
+  overflow: visible;
+}
+
+.app-header__actions {
+  align-items: center;
+  gap: 0.5rem;
+  max-width: none;
+}
+
+.app-header__actions-wrapper {
+  margin-right: 0.75rem;
+}
+
+/* Un filet sous l'en-tete : il pose la limite entre la barre d'outils et la
+   page, la ou il n'y avait qu'un vide flottant. */
+.app-header::after {
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--optinov-bordure) 12%,
+    var(--optinov-bordure) 88%,
+    transparent
+  );
+  bottom: 0;
+  content: '';
+  height: 1px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+/* ------------------------------------------------- La barre de recherche */
+
+.op-recherche {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-pilule); // « rounded-full »
+  box-shadow: var(--optinov-ombre-douce);
+  display: flex;
+  gap: 0.45rem;
+  height: 38px;
+  padding: 0 0.9rem;
+  transition: width var(--optinov-transition), border-color var(--optinov-transition),
+    box-shadow var(--optinov-transition);
+  width: 300px;
+
+  &:hover {
+    border-color: rgba(15, 30, 61, 0.16);
+  }
+
+  /* Le meme anneau orange que les champs de formulaire : une seule grammaire
+     de focus dans tout le back-office. */
+  &:focus-within {
+    border-color: var(--optinov-orange);
+    box-shadow: 0 0 0 3px rgba(238, 111, 46, 0.18);
+  }
+}
+
+.op-recherche__loupe {
+  color: var(--optinov-encre-claire);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.op-recherche__champ {
+  background: transparent;
+  border: 0;
+  color: var(--optinov-marine);
+  font-size: 0.85rem;
+  min-width: 0;
+  outline: none;
+  width: 100%;
+
+  &::placeholder {
+    color: var(--optinov-encre-claire);
+  }
+
+  /* La croix native de `type="search"` casse l'alignement : on la retire. */
+  &::-webkit-search-cancel-button {
+    appearance: none;
+  }
+}
+
+/* Present pour le clavier et les lecteurs d'ecran, invisible a l'oeil. */
+.op-recherche__envoi {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+/* ------------------------------------------------------- La cloche */
+
+.op-cloche {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--optinov-radius-pilule);
+  color: var(--optinov-marine);
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  position: relative;
+  transition: background-color var(--optinov-transition), border-color var(--optinov-transition);
+  width: 38px;
+
+  &:hover {
+    background: rgba(15, 30, 61, 0.06);
+    border-color: var(--optinov-bordure);
+  }
+}
+
+/*
+  LE POINT QUI PULSE.
+  Une animation lente (2 s) et de faible amplitude : elle attire le regard en
+  peripherie sans jamais clignoter. Le halo est un `box-shadow` qui s'ouvre puis
+  s'efface — donc aucune reflow, l'animation reste sur le compositeur.
+*/
+.op-cloche__point {
+  background: var(--optinov-orange);
+  border: 2px solid var(--optinov-creme);
+  border-radius: 50%;
+  height: 9px;
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  width: 9px;
+  animation: optinov-pulsation 2s ease-out infinite;
+}
+
+@keyframes optinov-pulsation {
+  0% {
+    box-shadow: 0 0 0 0 rgba(238, 111, 46, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(238, 111, 46, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(238, 111, 46, 0);
+  }
+}
+
+/* Le nombre exact, pour qui veut la precision plutot que l'alerte. */
+.op-cloche__compte {
+  background: var(--optinov-orange-fonce);
+  border-radius: var(--optinov-radius-pilule);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  left: 50%;
+  line-height: 1;
+  padding: 0.18rem 0.34rem;
+  position: absolute;
+  top: -2px;
+  transform: translateX(2px);
+}
+
+/* Quand le compte est affiche, le point ferait doublon a la meme place. */
+.op-cloche__compte ~ .op-cloche__point,
+.op-cloche:has(.op-cloche__compte) .op-cloche__point {
+  display: none;
+}
+
+/* ------------------------------------------------ Avatar et menu compte */
+
+.op-avatar {
+  align-items: center;
+  background: linear-gradient(140deg, var(--optinov-marine-700), var(--optinov-marine));
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 3px var(--optinov-bordure);
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.74rem;
+  font-weight: 700;
+  height: 34px;
+  justify-content: center;
+  letter-spacing: 0.02em;
+  transition: box-shadow var(--optinov-transition);
+  width: 34px;
+}
+
+.app-header__account:hover .op-avatar {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 3px var(--optinov-orange);
+}
+
+.op-menu-compte {
+  position: relative;
+}
+
+.op-menu-compte__declencheur {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--optinov-radius-pilule);
+  color: var(--optinov-encre);
+  cursor: pointer;
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  transition: background-color var(--optinov-transition), color var(--optinov-transition);
+  width: 24px;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: rgba(15, 30, 61, 0.06);
+    color: var(--optinov-marine);
+  }
+}
+
+.op-menu-compte__chevron {
+  display: flex;
+  transition: transform var(--optinov-transition);
+}
+
+.op-menu-compte__declencheur[aria-expanded='true'] .op-menu-compte__chevron {
+  transform: rotate(180deg);
+}
+
+.op-menu-compte__panneau {
+  background: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-md);
+  box-shadow: var(--optinov-ombre-menu);
+  min-width: 248px;
+  overflow: hidden;
+  padding: 0.4rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.6rem);
+  z-index: 60;
+  animation: optinov-apparition 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes optinov-apparition {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.op-menu-compte__identite {
+  align-items: center;
+  border-bottom: 1px solid var(--optinov-trait-doux);
+  display: flex;
+  gap: 0.65rem;
+  margin-bottom: 0.35rem;
+  padding: 0.6rem 0.65rem 0.75rem;
+}
+
+.op-menu-compte__initiales {
+  align-items: center;
+  background: linear-gradient(140deg, var(--optinov-marine-700), var(--optinov-marine));
+  border-radius: 50%;
+  color: #ffffff;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.op-menu-compte__identite-texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.op-menu-compte__nom {
+  color: var(--optinov-marine);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.op-menu-compte__courriel {
+  color: var(--optinov-encre-claire);
+  font-size: 0.74rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.op-menu-compte__entree {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--optinov-radius-sm);
+  color: var(--optinov-encre);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.84rem;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color var(--optinov-transition), color var(--optinov-transition);
+  width: 100%;
+
+  &:hover {
+    background: rgba(15, 30, 61, 0.05);
+    color: var(--optinov-marine);
+    text-decoration: none;
+  }
+}
+
+.op-menu-compte__entree--sortie {
+  color: var(--optinov-orange-fonce);
+
+  &:hover {
+    background: rgba(238, 111, 46, 0.09);
+    color: var(--optinov-orange-fonce);
+  }
+}
+
+.op-menu-compte__separateur {
+  background: var(--optinov-trait-doux);
+  height: 1px;
+  margin: 0.35rem 0.15rem;
+}
+
+/* ========================================================================== */
+/* 5. TABLEAU DE BORD                                                        */
+/* ========================================================================== */
+
+.op-tdb {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem var(--gutter-h) 3rem;
+}
+
+/* ------------------------------------------------------ Bandeau d'accueil */
+
+.op-hero {
+  align-items: flex-end;
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(238, 111, 46, 0.22) 0%, rgba(238, 111, 46, 0) 55%),
+    linear-gradient(135deg, var(--optinov-marine) 0%, var(--optinov-marine-900) 100%);
+  border-radius: var(--optinov-radius-xl);
+  box-shadow: var(--optinov-shadow-card);
+  color: #ffffff;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 2.25rem 2.25rem 2rem;
+  position: relative;
+}
+
+.op-hero__kicker {
+  color: rgba(244, 137, 79, 0.95);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/*
+  LA TYPOGRAPHIE DEMANDEE : le texte courant en graisse legere, le prenom en
+  gras. Le contraste de graisse fait exister le prenom sans avoir besoin d'une
+  couleur d'accent — l'interface reste calme.
+*/
+.op-hero__titre {
+  color: #ffffff;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.5rem, 2.4vw, 2.05rem);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 0.65rem 0 0;
+
+  strong {
+    font-weight: 700;
+  }
+}
+
+.op-hero__sous-titre {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.93rem;
+  line-height: 1.6;
+  margin: 0.7rem 0 0;
+  max-width: 62ch;
+}
+
+.op-hero__date {
+  color: rgba(255, 255, 255, 0.55);
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  margin: 0;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------- Les cartes statistiques */
+
+.op-tuiles {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+}
+
+.op-tuile {
+  background: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-lg);
+  box-shadow: var(--optinov-ombre-douce);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 1.35rem 1.4rem 1.2rem;
+  position: relative;
+  text-decoration: none;
+  transition: box-shadow var(--optinov-transition), transform var(--optinov-transition),
+    border-color var(--optinov-transition);
+
+  &:hover {
+    border-color: rgba(15, 30, 61, 0.14);
+    box-shadow: var(--optinov-shadow-lift);
+    text-decoration: none;
+    transform: translateY(-3px);
+  }
+}
+
+/*
+  LA PASTILLE D'ICONE : un rond de la couleur de marque a 10 % d'opacite, avec
+  le trait a pleine intensite par-dessus. C'est le meme geste que sur le site
+  vitrine, et il ne coute aucune couleur nouvelle.
+*/
+.op-tuile__pastille {
+  align-items: center;
+  background: rgba(15, 30, 61, 0.08);
+  border-radius: 50%;
+  color: var(--optinov-marine);
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+  transition: background-color var(--optinov-transition), transform var(--optinov-transition);
+  width: 38px;
+}
+
+.op-tuile:hover .op-tuile__pastille {
+  background: rgba(15, 30, 61, 0.13);
+  transform: scale(1.06);
+}
+
+.op-tuile__valeur {
+  color: var(--optinov-marine);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.op-tuile__label {
+  color: var(--optinov-encre);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-top: 0.3rem;
+}
+
+.op-tuile__pied {
+  align-items: center;
+  border-top: 1px solid var(--optinov-trait-doux);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+  padding-top: 0.7rem;
+}
+
+.op-tuile__legende {
+  color: var(--optinov-encre-claire);
+  font-size: 0.72rem;
+}
+
+/*
+  LA TUILE D'ALERTE. Elle n'est orange QUE si son compteur est non nul (la
+  classe est posee par le composant). Trois tuiles qui crient en meme temps, et
+  plus personne n'en regarde aucune.
+*/
+.op-tuile--alerte {
+  background: linear-gradient(180deg, rgba(238, 111, 46, 0.05) 0%, #ffffff 55%);
+  border-color: rgba(238, 111, 46, 0.35);
+
+  .op-tuile__pastille {
+    background: rgba(238, 111, 46, 0.12);
+    color: var(--optinov-orange-fonce);
+  }
+
+  .op-tuile__valeur {
+    color: var(--optinov-orange-fonce);
+  }
+
+  &:hover {
+    border-color: var(--optinov-orange);
+  }
+}
+
+/* La barre de progression : la part d'un tout, lue d'un coup d'oeil. */
+.op-jauge {
+  background: rgba(15, 30, 61, 0.08);
+  border-radius: var(--optinov-radius-pilule);
+  display: block;
+  flex: 1 1 70px;
+  height: 5px;
+  min-width: 50px;
+  overflow: hidden;
+}
+
+.op-jauge__remplissage {
+  background: linear-gradient(90deg, var(--optinov-marine-700), var(--optinov-marine));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  min-width: 3px;
+}
+
+.op-tuile--alerte .op-jauge__remplissage {
+  background: linear-gradient(90deg, var(--optinov-orange), var(--optinov-orange-fonce));
+}
+
+/* L'indicateur de tendance : fleche + valeur, dans une pilule teintee. */
+.op-tendance {
+  align-items: center;
+  border-radius: var(--optinov-radius-pilule);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 600;
+  gap: 0.25rem;
+  padding: 0.18rem 0.5rem;
+}
+
+.op-tendance--hausse {
+  background: rgba(26, 122, 69, 0.1);
+  color: var(--optinov-vert);
+}
+
+.op-tendance--baisse {
+  background: rgba(180, 83, 26, 0.1);
+  color: var(--optinov-orange-fonce);
+}
+
+.op-tendance--stable {
+  background: rgba(15, 30, 61, 0.07);
+  color: var(--optinov-encre);
+}
+
+/* --------------------------------------------------- Les actions rapides */
+
+.op-rapides {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-lg);
+  box-shadow: var(--optinov-ombre-douce);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 1rem 1.25rem;
+}
+
+.op-rapides__intro {
+  color: var(--optinov-encre-claire);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  margin-right: 0.35rem;
+  text-transform: uppercase;
+}
+
+/*
+  LES BOUTONS « PREMIUM ».
+  Degrade tres court entre deux nuances du MEME bleu marine (pas une seconde
+  couleur), coins arrondis, et une elevation au survol : l'ombre s'ouvre et le
+  bouton monte de 1 px. On evite volontairement `transform: scale()`, qui rend
+  le texte flou sur les ecrans non-Retina.
+*/
+.op-bouton {
+  align-items: center;
+  background: linear-gradient(135deg, var(--optinov-marine-700) 0%, var(--optinov-marine) 100%);
+  border: 1px solid rgba(15, 30, 61, 0.2);
+  border-radius: var(--optinov-radius);
+  box-shadow: 0 1px 2px rgba(15, 30, 61, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.5rem;
+  padding: 0.62rem 1.1rem;
+  text-decoration: none;
+  transition: box-shadow var(--optinov-transition), transform var(--optinov-transition),
+    background var(--optinov-transition);
+
+  &:hover {
+    background: linear-gradient(135deg, #157885 0%, var(--optinov-marine-800) 100%);
+    box-shadow: 0 6px 16px rgba(15, 30, 61, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    box-shadow: 0 1px 2px rgba(15, 30, 61, 0.2);
+    transform: translateY(0);
+  }
+}
+
+/* La variante sourde, pour l'action la moins frequente des trois. */
+.op-bouton--secondaire {
+  background: #ffffff;
+  border-color: var(--optinov-bordure);
+  box-shadow: var(--optinov-ombre-douce);
+  color: var(--optinov-marine);
+
+  &:hover {
+    background: rgba(15, 30, 61, 0.04);
+    border-color: rgba(15, 30, 61, 0.18);
+    box-shadow: 0 6px 16px rgba(15, 30, 61, 0.1);
+    color: var(--optinov-marine);
+  }
+}
+
+/* ------------------------------------------- La grille listes + panneau */
+
+.op-grille {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(260px, 0.72fr);
+}
+
+@media (max-width: 1400px) {
+  .op-grille {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .op-aside {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .op-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------- Cartes-listes */
+
+.op-carte {
+  background: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-lg);
+  box-shadow: var(--optinov-ombre-douce);
+  padding: 1.4rem 1.5rem 1rem;
+}
+
+.op-carte__entete {
+  align-items: baseline;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+  /*
+    Le filet orange ne court plus sur toute la largeur : il souligne le titre
+    seul (voir .op-carte__titre). Une regle pleine largeur decoupait la carte en
+    deux blocs sans lien ; ce trait-la RATTACHE le titre a sa liste.
+  */
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--optinov-trait-doux);
+}
+
+.op-carte__titre {
+  align-items: center;
+  color: var(--optinov-marine);
+  display: flex;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.12rem;
+  gap: 0.5rem;
+  margin: 0;
+  position: relative;
+
+  &::after {
+    background: var(--optinov-orange);
+    border-radius: 2px;
+    bottom: -0.57rem;
+    content: '';
+    height: 2px;
+    left: 0;
+    position: absolute;
+    width: 34px;
+  }
+}
+
+.op-carte__compte {
+  background: rgba(15, 30, 61, 0.07);
+  border-radius: var(--optinov-radius-pilule);
+  color: var(--optinov-encre);
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+}
+
+.op-carte__lien {
+  color: var(--optinov-orange-fonce);
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: color var(--optinov-transition);
+
+  &:hover {
+    color: var(--optinov-orange);
+    text-decoration: underline;
+  }
+}
+
+.op-vide {
+  color: var(--optinov-encre-claire);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  padding: 1rem 0 0.5rem;
+}
+
+/* ------------------------------------------------------------ Les lignes */
+
+.op-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+  SEPARATION DES LIGNES : un filet de bleu marine a 6 %, pas un trait noir.
+  A cette intensite, le trait guide l'oeil d'une ligne a l'autre sans jamais
+  devenir un element de dessin. L'espacement fait le reste du travail.
+*/
+.op-ligne {
+  align-items: center;
+  border-radius: var(--optinov-radius);
+  display: flex;
+  gap: 0.8rem;
+  margin: 0 -0.6rem;
+  padding: 0.7rem 0.6rem;
+  position: relative;
+  transition: background-color var(--optinov-transition);
+
+  & + .op-ligne::before {
+    background: var(--optinov-bordure-fine);
+    content: '';
+    height: 1px;
+    left: 0.6rem;
+    position: absolute;
+    right: 0.6rem;
+    top: 0;
+  }
+
+  &:hover {
+    background: rgba(15, 30, 61, 0.035);
+  }
+
+  /* Les icones d'action n'apparaissent qu'au survol de la ligne : au repos,
+     la liste reste lisible ; a l'approche, l'outil se presente. */
+  &:hover .op-actions__bouton,
+  &:focus-within .op-actions__bouton {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.op-ligne__corps {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+.op-ligne__haut {
+  align-items: baseline;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+
+.op-ligne__nom {
+  color: var(--optinov-marine);
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.op-ligne:hover .op-ligne__nom {
+  color: var(--optinov-marine-700);
+}
+
+.op-ligne__date {
+  color: var(--optinov-encre-claire);
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.op-ligne__meta {
+  color: var(--optinov-encre);
+  font-size: 0.775rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.op-ligne__fin {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+/* Le rond d'initiales — un point d'ancrage visuel par ligne. */
+.op-rond {
+  align-items: center;
+  background: rgba(15, 30, 61, 0.08);
+  border-radius: 50%;
+  color: var(--optinov-marine);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.op-vignette {
+  border-radius: var(--optinov-radius-sm);
+  flex-shrink: 0;
+  height: 40px;
+  object-fit: cover;
+  width: 58px;
+}
+
+.op-vignette--absente {
+  align-items: center;
+  background: rgba(15, 30, 61, 0.07);
+  color: var(--optinov-marine);
+  display: inline-flex;
+  justify-content: center;
+  opacity: 0.65;
+}
+
+/* -------------------------------------------------- Pastilles de statut */
+
+/*
+  Fond semi-transparent, texte de la meme famille en plus fonce : la pastille
+  se lit sans crier. Les couples exacts viennent de lib/statuts.ts, ou ils sont
+  verifies contrastes AA sur blanc.
+*/
+.op-pastille {
+  align-items: center;
+  border-radius: var(--optinov-radius-pilule);
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  line-height: 1.4;
+  padding: 0.2rem 0.6rem 0.2rem 0.5rem;
+  white-space: nowrap;
+}
+
+/* Le point reprend la couleur du texte : l'information passe donc par la
+   FORME autant que par la teinte (daltonisme). */
+.op-pastille__point {
+  background: currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 5px;
+  width: 5px;
+}
+
+/* ------------------------------------------------------ Icones d'action */
+
+.op-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.15rem;
+}
+
+.op-actions__bouton {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--optinov-radius-sm);
+  color: var(--optinov-encre-claire);
+  cursor: pointer;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  opacity: 0;
+  padding: 0;
+  transform: translateX(4px);
+  transition: opacity var(--optinov-transition), transform var(--optinov-transition),
+    background-color var(--optinov-transition), color var(--optinov-transition);
+  width: 30px;
+
+  /* Toujours visible au clavier, meme sans survol souris. */
+  &:focus-visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.4;
+  }
+}
+
+.op-actions__bouton--voir:hover,
+.op-actions__bouton--modifier:hover {
+  background: rgba(15, 30, 61, 0.08);
+  color: var(--optinov-marine);
+}
+
+/* La suppression est la seule action qui se teinte : elle doit se distinguer
+   des deux autres AVANT le clic, pas apres. */
+.op-actions__bouton--supprimer:hover {
+  background: rgba(238, 111, 46, 0.12);
+  color: var(--optinov-orange-fonce);
+}
+
+.op-actions__erreur {
+  color: var(--optinov-orange-fonce);
+  font-size: 0.7rem;
+  max-width: 14ch;
+}
+
+/* --------------------------------------- Panneau lateral « verre depoli » */
+
+/*
+  L'EFFET « GLASSMORPHISM », VERSION SOBRE.
+  Un fond blanc a 62 % pose sur le creme, plus un flou d'arriere-plan : le
+  panneau parait flotter au-dessus de la page sans qu'aucune couleur nouvelle
+  n'apparaisse. On reste tres en deca des effets de verre spectaculaires — sur
+  un outil de travail, ils coutent en lisibilite ce qu'ils rapportent en effet.
+
+  `backdrop-filter` n'est pas universel : on donne d'abord un fond opaque, que
+  la regle @supports allege seulement si le navigateur sait flouter.
+*/
+.op-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.op-aside__bloc {
+  background: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-lg);
+  box-shadow: var(--optinov-ombre-douce);
+  padding: 1.25rem 1.35rem 1.35rem;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .op-aside__bloc {
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    backdrop-filter: blur(14px) saturate(1.4);
+    background: rgba(255, 255, 255, 0.62);
+    border-color: rgba(255, 255, 255, 0.75);
+    box-shadow: var(--optinov-shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+}
+
+.op-aside__titre {
+  align-items: center;
+  color: var(--optinov-marine);
+  display: flex;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  gap: 0.45rem;
+  margin: 0 0 0.9rem;
+}
+
+.op-aside__note {
+  color: var(--optinov-vert);
+  font-size: 0.78rem;
+  margin: 0.85rem 0 0;
+}
+
+.op-taches {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.op-tache a {
+  align-items: center;
+  border-radius: var(--optinov-radius);
+  color: var(--optinov-encre);
+  display: flex;
+  font-size: 0.82rem;
+  gap: 0.65rem;
+  line-height: 1.4;
+  padding: 0.45rem 0.5rem;
+  text-decoration: none;
+  transition: background-color var(--optinov-transition), color var(--optinov-transition);
+
+  &:hover {
+    background: rgba(15, 30, 61, 0.05);
+    color: var(--optinov-marine);
+    text-decoration: none;
+  }
+}
+
+/* La « case a cocher » porte le nombre restant : elle dit a la fois quoi faire
+   et combien il en reste. Un simple carre vide n'aurait dit ni l'un ni l'autre. */
+.op-tache__case {
+  align-items: center;
+  background: rgba(238, 111, 46, 0.12);
+  border-radius: var(--optinov-radius-sm);
+  color: var(--optinov-orange-fonce);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  min-width: 24px;
+  padding: 0 0.3rem;
+}
+
+.op-tache--faite {
+  .op-tache__case {
+    background: rgba(26, 122, 69, 0.12);
+    color: var(--optinov-vert);
+  }
+
+  .op-tache__libelle {
+    color: var(--optinov-encre-claire);
+    text-decoration: line-through;
+    text-decoration-color: rgba(154, 164, 178, 0.6);
+  }
+}
+
+.op-raccourcis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  a {
+    border-radius: var(--optinov-radius-sm);
+    color: var(--optinov-encre);
+    display: block;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.5rem;
+    text-decoration: none;
+    transition: background-color var(--optinov-transition), color var(--optinov-transition),
+      padding-left var(--optinov-transition);
+
+    &:hover {
+      background: rgba(15, 30, 61, 0.05);
+      color: var(--optinov-marine);
+      padding-left: 0.75rem;
+      text-decoration: none;
+    }
+  }
+}
+
+/* ========================================================================== */
+/* 6. VUE « RECHERCHE GLOBALE »                                              */
+/* ========================================================================== */
+
+.op-recherche-vue {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.5rem var(--gutter-h) 3rem;
+}
+
+.op-recherche-vue__titre {
+  align-items: center;
+  color: var(--optinov-marine);
+  display: flex;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.6rem;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.op-recherche-vue__resume {
+  color: var(--optinov-encre);
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0;
+
+  strong {
+    color: var(--optinov-marine);
+  }
+}
+
+.op-recherche-vue__rubriques {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+/* ========================================================================== */
+/* 7. TITRES, BOUTONS ET CHAMPS DE PAYLOAD                                   */
+/* ========================================================================== */
+
+h1,
+h2,
+.doc-header__title,
+.list-header h1,
+.dashboard__label {
+  color: var(--optinov-marine);
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Filet orange sous le titre des fiches — signature visuelle OPTINOV.
+   Il ne fait plus toute la largeur : un trait court sous le premier mot suffit
+   a signer, la ou une regle pleine largeur coupait la page en deux. */
+.doc-header__title {
+  padding-bottom: 0.6rem;
+  position: relative;
+
+  &::after {
+    background: var(--optinov-orange);
+    border-radius: 2px;
+    bottom: 0;
+    content: '';
+    height: 2px;
+    left: 0;
+    position: absolute;
+    width: 48px;
+  }
+}
+
+.btn {
+  border-radius: var(--optinov-radius);
+  font-weight: 600;
+  transition: background-color var(--optinov-transition), box-shadow var(--optinov-transition),
+    transform var(--optinov-transition);
+}
+
+.btn--style-primary {
+  background-color: var(--optinov-marine);
+  border-color: var(--optinov-marine);
+  box-shadow: 0 1px 2px rgba(15, 30, 61, 0.18);
+  color: #ffffff;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--optinov-marine-700);
+    border-color: var(--optinov-marine-700);
+    box-shadow: 0 6px 16px rgba(15, 30, 61, 0.22);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* Liens de contenu : l'orange assombri, lisible sur fond clair. */
+.collection-list a,
+.doc-tabs a,
+.step-nav a {
+  color: var(--optinov-orange-fonce);
+}
+
+/* Champs de formulaire : bord doux, focus orange bien visible. */
+.field-type input,
+.field-type textarea,
+.field-type .rs__control {
+  border-color: var(--optinov-bordure);
+  border-radius: var(--optinov-radius);
+  transition: border-color var(--optinov-transition), box-shadow var(--optinov-transition);
+
+  &:focus,
+  &:focus-within {
+    border-color: var(--optinov-orange);
+    box-shadow: 0 0 0 3px rgba(238, 111, 46, 0.18);
+  }
+}
+
+/* Les textes d'aide sous les champs : plus lisibles. */
+.field-description {
+  color: var(--optinov-encre);
+  line-height: 1.55;
+}
+
+/* Les onglets d'une fiche (Parametres du site, par exemple). */
+.tabs-field__tab-button--active {
+  border-bottom-color: var(--optinov-orange) !important;
+  color: var(--optinov-marine);
+  font-weight: 600;
+}
+
+/* ========================================================================== */
+/* 8. LES LISTES — l'ecran ou l'on passe le plus de temps.                   */
+/* ========================================================================== */
+
+/* La liste est posee comme une carte sur le fond creme, pas collee au bord. */
+.collection-list__wrap,
+.table {
+  background-color: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-lg);
+  box-shadow: var(--optinov-ombre-douce);
+  overflow: hidden;
+}
+
+.table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/*
+  EN-TETE DE TABLEAU : plus de bandeau bleu marine plein.
+  Un aplat fonce sur toute la largeur ecrasait la page et faisait ressembler
+  chaque liste a un tableur. On garde le marine pour le TEXTE, sur un fond
+  creme : la hierarchie est la, le poids visuel en moins.
+*/
+.table thead th {
+  background-color: var(--optinov-creme);
+  border-bottom: 1px solid var(--optinov-bordure);
+  color: var(--optinov-marine);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  padding: 0.9rem 1.1rem;
+  text-transform: uppercase;
+
+  button {
+    color: var(--optinov-marine);
+  }
+
+  svg .stroke {
+    stroke: var(--optinov-encre-claire);
+  }
+}
+
+/* Lignes : survol franc. En balayant 200 articles, l'oeil doit suivre sa ligne. */
+.table tbody tr {
+  transition: background-color 120ms ease-out;
+
+  &:hover {
+    background-color: rgba(15, 30, 61, 0.035);
+  }
+
+  td {
+    border-bottom: 1px solid var(--optinov-bordure-fine);
+    padding: 0.85rem 1.1rem;
+  }
+
+  /* Pas de filet sous la derniere ligne : le bord de la carte le fait deja. */
+  &:last-child td {
+    border-bottom: 0;
+  }
+}
+
+/* La barre de recherche et les filtres, au-dessus de la liste. */
+.list-controls {
+  background: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-lg);
+  box-shadow: var(--optinov-ombre-douce);
+  margin-bottom: 1.1rem;
+  padding: 0.45rem 0.6rem;
+}
+
+/* Bouton « Ajouter » de l'en-tete de liste : en evidence, en bleu marine. */
+.list-header__title-and-actions .btn,
+.list-header .pill {
+  background-color: var(--optinov-marine);
+  border-radius: var(--optinov-radius);
+  color: #ffffff;
+  font-weight: 600;
+
+  &:hover {
+    background-color: var(--optinov-marine-700);
+    color: #ffffff;
+  }
+}
+
+/* Barre d'actions des fiches — le bouton « Sauvegarder » suit le defilement. */
+.doc-controls {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(250, 249, 246, 0.9);
+  border-bottom: 1px solid var(--optinov-bordure);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* ========================================================================== */
+/* 9. PIED DE PAGE                                                           */
+/* ========================================================================== */
+
+/*
+  Le pied de page est rendu APRES `.template-default` (voir PiedDePage.tsx).
+  Comme ce gabarit fait `min-height: 100vh`, le pied serait toujours hors ecran :
+  on lui reprend sa propre hauteur pour qu'il tienne dans la premiere vue.
+*/
+.template-default {
+  min-height: calc(100vh - 52px);
+}
+
+.op-pied {
+  border-top: 1px solid var(--optinov-bordure-fine);
+  font-size: 0.75rem;
+  padding: 1rem var(--gutter-h);
+}
+
+.op-pied__contenu {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  justify-content: space-between;
+  /*
+    On decale le contenu vers la droite : le bouton de deconnexion est ancre en
+    `position: fixed` dans le coin bas-gauche de l'ecran (voir §3) et viendrait
+    sinon se poser par-dessus ce texte.
+  */
+  padding-left: 3.25rem;
+}
+
+.op-pied__marque {
+  color: var(--optinov-encre-claire);
+}
+
+.op-pied__sep {
+  padding: 0 0.4rem;
+}
+
+.op-pied__annee {
+  color: var(--optinov-encre-claire);
+}
+
+.op-pied__liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+
+  a {
+    color: var(--optinov-encre);
+    text-decoration: none;
+    transition: color var(--optinov-transition);
+
+    &:hover {
+      color: var(--optinov-orange-fonce);
+      text-decoration: underline;
+    }
+  }
+}
+
+/* ========================================================================== */
+/* 10. PAGE DE CONNEXION — reprend la « carte » du site vitrine.             */
+/* ========================================================================== */
+
+.template-minimal {
+  background-color: var(--optinov-creme);
+}
+
+.template-minimal__wrap {
+  background-color: #ffffff;
+  border: 1px solid var(--optinov-bordure);
+  border-radius: var(--optinov-radius-lg);
+  border-top: 3px solid var(--optinov-orange); // le filet signature du site
+  box-shadow: var(--optinov-shadow-card);
+  max-width: 520px;
+  padding: 2.5rem 2rem 2.75rem;
+  width: 100%;
+}
+
+/* ========================================================================== */
+/* 11. RESPONSIVE — le back-office doit rester utilisable sur telephone.     */
+/* : cibles tactiles >= 44 px, une seule colonne sur mobile.         */
+/* ========================================================================== */
+
+/*
+  LA BARRE LATERALE SUR PETIT ECRAN.
+  Payload la replie deja derriere un bouton hamburger en dessous de 1440 px —
+  on ne refait donc pas ce travail, on le rend seulement plus confortable :
+  cibles plus hautes, panneau qui couvre l'ecran, bouton de fermeture visible.
+*/
+
+@media (max-width: 1200px) {
+  /* Sous 1200 px, la recherche se replie sur sa loupe et ne s'ouvre qu'au
+     focus. Elle cesse ainsi de disputer la place au fil d'ariane. */
+  .op-recherche {
+    width: 38px;
+    padding: 0 0.6rem;
+
+    &:focus-within {
+      width: 260px;
+    }
+  }
+
+  .op-recherche__champ {
+    opacity: 0;
+    transition: opacity var(--optinov-transition);
+  }
+
+  .op-recherche:focus-within .op-recherche__champ {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .op-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.75rem 1.6rem 1.6rem;
+  }
+
+  .op-hero__date {
+    order: -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .op-tdb,
+  .op-recherche-vue {
+    gap: 1.1rem;
+    padding-bottom: 2rem;
+  }
+
+  .op-tuiles {
+    /* Deux colonnes plutot qu'une : six tuiles empilees feraient defiler la
+       page entiere avant d'atteindre la premiere liste. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .op-tuile {
+    padding: 1rem 1rem 0.9rem;
+  }
+
+  .op-tuile__valeur {
+    font-size: 1.7rem;
+  }
+
+  .op-tuile__pastille {
+    height: 32px;
+    margin-bottom: 0.6rem;
+    width: 32px;
+  }
+
+  .op-carte {
+    padding: 1.1rem 1.1rem 0.8rem;
+  }
+
+  /* Les actions de ligne ne peuvent pas dependre du survol : il n'y a pas de
+     souris. On les affiche en permanence, a taille tactile. */
+  .op-actions__bouton {
+    height: 40px;
+    opacity: 1;
+    transform: none;
+    width: 40px;
+  }
+
+  .op-rapides {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .op-bouton {
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  /* Cibles tactiles : au moins 44 px de haut. */
+  .btn,
+  .field-type input,
+  .field-type .rs__control {
+    min-height: 44px;
+  }
+
+  .nav__link {
+    font-size: 0.95rem;
+    padding: 0.7rem 0.75rem;
+  }
+
+  /* La barre laterale se superpose au contenu plutot que de le comprimer. */
+  .nav {
+    z-index: 100;
+  }
+
+  .nav__mobile-close {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Les rangees de champs (type « row ») passent en colonne unique :
+     sans cela, « Surface / Pieces / Chambres » seraient ecrases sur 3 colonnes
+     de 80 px de large, impossibles a remplir au pouce. */
+  .render-fields .field-type.row,
+  .field-type.row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Le titre de fiche reste lisible sans deborder. */
+  .doc-header__title {
+    font-size: 1.5rem;
+    word-break: break-word;
+  }
+
+  /* Plus de bouton flottant : le pied de page reprend toute sa largeur. */
+  .op-pied__contenu {
+    padding-left: 0;
+  }
+
+  .op-pied {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .op-tuiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .template-minimal__wrap {
+    border-radius: var(--optinov-radius);
+    padding: 1.75rem 1.25rem 2rem;
+  }
+
+  .op-ligne__fin {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+  }
+}
+
+/* ========================================================================== */
+/* 12. MOUVEMENT REDUIT                                                      */
+/* ========================================================================== */
+
+/*
+  Certaines personnes souffrent de troubles vestibulaires : une interface qui
+  glisse et pulse leur donne la nausee. Le systeme d'exploitation permet de le
+  signaler ; on respecte ce reglage en supprimant tout deplacement, sans rien
+  retirer de l'information (les couleurs et les etats restent).
+*/
+@media (prefers-reduced-motion: reduce) {
+  .op-cloche__point {
+    animation: none;
+  }
+
+  .op-tuile:hover,
+  .op-bouton:hover,
+  .btn--style-primary:hover,
+  .nav a.nav__link:hover {
+    transform: none;
+  }
+
+  .op-menu-compte__panneau {
+    animation: none;
+  }
+
+  .op-actions__bouton {
+    transition: opacity var(--optinov-transition);
+  }
+}

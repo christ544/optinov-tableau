@@ -1,19 +1,19 @@
 import React from 'react'
-import './styles.css'
 
+/*
+  Gabarit racine du groupe "(frontend)", c'est-à-dire de tout ce qui n'est ni
+  /admin ni /api. Ce projet n'a pas de site public (le site vitrine vit dans
+  son propre dépôt), la seule page de ce groupe redirige vers l'admin.
+*/
 export const metadata = {
-  description: 'A blank template using Payload in a Next.js app.',
-  title: 'Payload Blank Template',
+  title: 'OPTINOV — Tableau de bord',
+  description: "Tableau de bord du site vitrine de l'agence OPTINOV.",
 }
 
-export default async function RootLayout(props: { children: React.ReactNode }) {
-  const { children } = props
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
-        <main>{children}</main>
-      </body>
+    <html lang="fr">
+      <body>{children}</body>
     </html>
   )
 }

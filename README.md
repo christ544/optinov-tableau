@@ -1,123 +1,225 @@
-# Payload Cloudflare Template
+# OPTINOV — Tableau de bord du site vitrine
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/payloadcms/payload/tree/3.x/templates/with-cloudflare-d1)
+Back-office du site vitrine de l'agence de communication OPTINOV. Il permet à
+l'équipe de publier des articles de blog et de choisir les illustrations des
+pages Services, sans toucher au code du site.
 
-**This can only be deployed on Paid Workers right now due to size limits.** This template comes configured with the bare minimum to get started on anything you need.
+Il est construit avec [Payload CMS](https://payloadcms.com) 3 sur Next.js 16,
+avec une base PostgreSQL. L'interface d'administration est en français.
 
-## Quick start
+> Ce dépôt ne contient **pas** le site vitrine lui-même. Le site vit dans son
+> propre dépôt : il lit le contenu de ce tableau de bord par l'API REST
+> (voir « Ce que le site peut lire ») et il est reconstruit automatiquement
+> après chaque modification (voir « Reconstruction du site »).
 
-This template can be deployed directly to Cloudflare Workers by clicking the button to take you to the setup screen.
+## Pile technique
 
-From there you can connect your code to a git provider such Github or Gitlab, name your Workers, D1 Database and R2 Bucket as well as attach any additional environment variables or services you need.
+| Rôle | Outil |
+| --- | --- |
+| Back-office et API | Payload CMS 3.88 (TypeScript, collections définies en code) |
+| Serveur | Next.js 16 (App Router) |
+| Base de données | PostgreSQL 17 en local, [Neon](https://neon.tech) en production |
+| Images | disque local en développement, [Cloudinary](https://cloudinary.com) en production |
+| Hébergement | [Render](https://render.com), offre gratuite, décrit par `render.yaml` |
+| Tests | Vitest (intégration) et Playwright (bout en bout) |
 
-## Quick Start - local setup
+## Installation locale
 
-To spin up this template locally, follow these steps:
+Prérequis : Node.js 22 et PostgreSQL (17 recommandé) installés.
 
-### Clone
+1. **Cloner et installer les dépendances**
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. Cloudflare will connect your app to a git provider such as Github and you can access your code from there.
+   ```bash
+   git clone https://github.com/christ544/optinov-tableau.git
+   cd optinov-tableau
+   npm install
+   ```
 
-### Local Development
+2. **Créer un rôle et une base dédiés** (demande une fois le mot de passe de
+   l'utilisateur `postgres`). Le mot de passe `optinov_tableau_dev` ne sert
+   qu'à cette base locale.
 
-## How it works
+   ```bash
+   psql -U postgres -h localhost -c "CREATE ROLE optinov_tableau LOGIN PASSWORD 'optinov_tableau_dev';" -c "CREATE DATABASE optinov_tableau OWNER optinov_tableau;"
+   ```
 
-Out of the box, using [`Wrangler`](https://developers.cloudflare.com/workers/wrangler/) will automatically create local bindings for you to connect to the remote services and it can even create a local mock of the services you're using with Cloudflare.
+   Sous Windows, `psql` se trouve dans `C:\Program Files\PostgreSQL\17\bin\`.
 
-We've pre-configured Payload for you with the following:
+3. **Créer le fichier `.env`** à partir de l'exemple, puis y renseigner
+   `PAYLOAD_SECRET` avec une valeur aléatoire (`openssl rand -hex 32`).
+   Laisser les variables Cloudinary et `SITE_DEPLOY_HOOK` vides : en local, les
+   images vont sur le disque et aucune reconstruction du site n'est déclenchée.
 
-### Collections
+   ```bash
+   cp .env.example .env
+   ```
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+4. **Créer les tables** puis **lancer le serveur**
 
-- #### Users (Authentication)
+   ```bash
+   npm run migrate
+   npm run dev
+   ```
 
-  Users are auth-enabled collections that have access to the admin panel.
+5. Ouvrir <http://localhost:3000/admin> : au premier lancement, Payload
+   propose de créer le premier compte administrateur.
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+## Commandes
 
-- #### Media
+| Commande | Effet |
+| --- | --- |
+| `npm run dev` | serveur de développement sur le port 3000 |
+| `npm run build` puis `npm run start` | build et serveur de production |
+| `npm run migrate` | applique les migrations en attente à la base |
+| `npm run migrate:create` | génère une migration après une modification des collections |
+| `npm run generate:types` | régénère `src/payload-types.ts` |
+| `npm run generate:importmap` | régénère la carte d'imports de l'admin (après tout ajout de composant) |
+| `npm run lint` | analyse ESLint |
+| `npm run test` | tests d'intégration puis tests de bout en bout |
+| `npm run seed` | remplit la base LOCALE d'un jeu de démonstration « [Démo] » (refuse une base Neon) |
 
-  This is the uploads enabled collection.
+## Ce que le site peut lire
 
-### Image Storage (R2)
+Toutes les lectures sont publiques ; l'écriture exige un compte du tableau de bord.
 
-Images will be served from an R2 bucket which you can then further configure to use a CDN to serve for your frontend directly.
+| Adresse | Contenu |
+| --- | --- |
+| `GET /api/globals/parametres` | coordonnées, horaires, réseaux sociaux, liens PROS.CARDS, mentions légales |
+| `GET /api/blog?sort=-date&limit=10` | articles du blog, du plus récent au plus ancien |
+| `GET /api/blog?where[slug][equals]=mon-article` | un article par son identifiant d'URL |
+| `GET /api/realisations?where[publiee][equals]=true&sort=ordre` | le portfolio (seules les fiches publiées sortent, même sans ce filtre) |
+| `GET /api/temoignages?sort=ordre` | témoignages clients |
+| `GET /api/equipe?sort=ordre&depth=1` | membres de l'équipe, portrait inclus |
+| `GET /api/faq?sort=ordre` | questions fréquentes, avec leur thème |
+| `GET /api/globals/service-images?depth=1` | les illustrations des cinq pages Services, images incluses |
+| `GET /api/media/:id` | la fiche d'une image (URL, dimensions, texte alternatif, trois tailles) |
 
-### D1 Database
+Le site lit tout cela au build, par `scripts/sync-content.mjs` dans son dépôt.
 
-The Worker will have direct access to a D1 SQLite database which Wrangler can connect locally to, just note that you won't have a connection string as you would typically with other providers.
+Le paramètre `depth` contrôle l'inclusion des relations : avec `depth=0`, une
+image est renvoyée sous forme d'identifiant ; avec `depth=1`, sous forme
+d'objet complet avec son `url`.
 
-You can enable read replicas by adding `readReplicas: 'first-primary'` in the DB adapter and then enabling it on your D1 Cloudflare dashboard. Read more about this feature on [our docs](https://payloadcms.com/docs/database/sqlite#d1-read-replicas).
+## Images
 
-## Working with Cloudflare
+- **En local**, les fichiers sont écrits dans `./media` (ignoré par Git).
+- **En production**, dès que `CLOUDINARY_CLOUD_NAME` est renseigné, ils partent
+  sur Cloudinary et sont servis par son CDN. L'adaptateur, dans
+  `src/storage/cloudinary.ts`, n'utilise pas le SDK Cloudinary : il signe
+  lui-même ses requêtes vers l'API REST.
 
-Firstly, after installing dependencies locally you need to authenticate with Wrangler by running:
+## Reconstruction du site
+
+Le site vitrine est un site statique : il faut le reconstruire pour qu'une
+modification de contenu apparaisse. Après chaque création, modification ou
+suppression d'article, et après chaque changement d'illustration, le hook
+`src/hooks/triggerSiteRebuild.ts` appelle l'URL définie par `SITE_DEPLOY_HOOK`
+(le « Deploy Hook » de Cloudflare Pages). Variable vide : rien ne se passe.
+
+Les appels sont regroupés : le hook ne part que deux minutes après le dernier
+enregistrement, pour qu'une session de saisie ne déclenche qu'une seule
+reconstruction et non une par clic sur « Enregistrer ».
+
+## Demandes du site et e-mails
+
+Les formulaires du site (contact, devis service, devis flotte PROS.CARDS, rappel)
+envoient chaque message dans la rubrique **Demandes** du tableau de bord, par
+`POST /api/demandes`. Le dépôt est public, la lecture réservée aux personnes
+connectées : personne ne peut relire les demandes sans compte. Une même
+personne ne peut pas déposer plus de cinq demandes en dix minutes, et le champ
+piège des formulaires écarte les robots.
+
+À chaque demande, deux e-mails partent : une **alerte** à `ALERTES_EMAIL` avec
+le téléphone en première ligne et un lien vers la fiche, et un **accusé de
+réception** au prospect s'il a laissé une adresse. L'envoi passe par le Gmail
+de l'agence (`SMTP_HOST=smtp.gmail.com`, port 465, `SMTP_USER` = l'adresse,
+`SMTP_PASS` = un mot de passe d'application Google, jamais le mot de passe du
+compte). Sans `SMTP_HOST`, rien n'est envoyé et les messages s'affichent dans la
+console : c'est le mode du développement local. Un échec d'envoi ne perd jamais
+la demande, qui reste consultable dans le tableau de bord.
+
+L'accueil du tableau de bord met en avant les demandes en attente depuis plus
+de 24 heures : un prospect qui attend plus d'un jour est un prospect perdu.
+
+## Comptes et sécurité
+
+Deux rôles :
+
+| Rôle | Droits |
+| --- | --- |
+| Administrateur | tout le contenu, plus la création et la suppression des comptes |
+| Éditeur | tout le contenu (articles, images, illustrations des pages Services) |
+
+Chacun peut modifier son propre compte, mais seul un administrateur peut
+changer un rôle. Le tout premier compte créé est automatiquement
+administrateur. Après cinq mots de passe erronés, un compte est bloqué dix
+minutes.
+
+Ce qui est en place par ailleurs :
+
+- **CORS et CSRF** : seuls le site vitrine (`FRONTEND_URL`) et le tableau de
+  bord lui-même peuvent appeler l'API en écriture avec un cookie de session.
+  L'adresse du tableau de bord se déduit de `RENDER_EXTERNAL_URL` sur Render,
+  ou de `PAYLOAD_PUBLIC_SERVER_URL` avec un nom de domaine dédié. Si cette
+  adresse est fausse, la consultation marche mais tout enregistrement échoue.
+- **Uploads** : images uniquement (JPEG, PNG, WebP, AVIF, GIF, pas de SVG),
+  15 Mo maximum, converties en WebP et déclinées en trois tailles
+  (`vignette` 400 px, `carte` 800 px, `grande` 1600 px).
+- **GraphQL désactivé** : le site n'utilise que l'API REST.
+- **Cookie de session** `Secure` dès que l'adresse publique est en `https://`.
+
+## Déploiement
+
+Les migrations s'appliquent automatiquement au démarrage en production
+(`prodMigrations` dans `src/payload.config.ts`). Le schéma n'est jamais
+modifié « à la volée » (`push: false`) : toute évolution passe par un fichier
+de migration commité. Cela vaut pour les deux hébergements ci-dessous.
+
+### Render
+
+Render lit `render.yaml` et crée le service. Variables à renseigner dans son
+interface : `DATABASE_URI` (Neon, avec `?sslmode=require`), les trois variables
+`CLOUDINARY_*`, `SITE_DEPLOY_HOOK`, et les trois variables d'e-mail `SMTP_USER`,
+`SMTP_PASS`, `ALERTES_EMAIL`. `PAYLOAD_SECRET` est généré par Render,
+`FRONTEND_URL`, `SMTP_HOST` et `SMTP_PORT` sont fixées dans `render.yaml`.
+
+Sur l'offre gratuite, le service s'endort après quinze minutes sans visite et
+met trente à soixante secondes à se réveiller : ce n'est pas une panne.
+
+### PlanetHoster (N0C)
+
+Deux fichiers ne servent qu'à cet hébergement, et Render les ignore :
+
+- **`server.cjs`** — le fichier de démarrage exécuté par Passenger, à déclarer
+  comme tel dans le panneau N0C. Extension `.cjs` obligatoire : le projet est en
+  `"type": "module"` et Passenger charge ce fichier avec `require()`.
+- **`deployer.sh`** — le déploiement complet en une commande : code, dépendances,
+  migrations, build bridé, lien `node_modules`, redémarrage, vérification.
+
+Les variables vivent dans un fichier `.env` sur le serveur (voir `.env.example`),
+et `PAYLOAD_PUBLIC_SERVER_URL` y est **obligatoire**. Procédure détaillée :
+[docs/GUIDE-PULL-REQUESTS-ET-DEPLOIEMENT.md](docs/GUIDE-PULL-REQUESTS-ET-DEPLOIEMENT.md),
+section 9.
+
+## Modifier le contenu pilotable
+
+1. Modifier une collection dans `src/collections/` ou un global dans `src/globals/`.
+2. `npm run migrate:create` : Payload compare le code et la base et écrit la migration dans `src/migrations/`.
+3. `npm run migrate` en local pour l'appliquer, puis commiter le code **et** la migration.
+4. `npm run generate:types` pour mettre à jour les types partagés.
+
+## Tests
 
 ```bash
-pnpm wrangler login
+npm run test:int   # Vitest : l'API interne de Payload, sur la base du .env
+npm run test:e2e   # Playwright : parcours dans l'admin, lance le serveur si besoin
 ```
 
-This will take you to Cloudflare to login and then you can use the Wrangler CLI locally for anything, use `pnpm wrangler help` to see all available options.
+Les tests de bout en bout créent puis suppriment un utilisateur de test.
 
-Wrangler is pretty smart so it will automatically bind your services for local development just by running `pnpm dev`.
+## Historique
 
-## Deployments
-
-When you're ready to deploy, first make sure you have created your migrations:
-
-```bash
-pnpm payload migrate:create
-```
-
-Then run the following command:
-
-```bash
-pnpm run deploy
-```
-
-This will spin up Wrangler in `production` mode, run any created migrations, build the app and then deploy the bundle up to Cloudflare.
-
-That's it! You can if you wish move these steps into your CI pipeline as well.
-
-## Enabling logs
-
-By default logs are not enabled for your API, we've made this decision because it does run against your quota so we've left it opt-in. But you can easily enable logs in one click in the Cloudflare panel, [see docs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs).
-
-### Logger Configuration
-
-This template includes a custom console-based logger compatible with Cloudflare Workers. Payload's default logger uses `pino-pretty`, which relies on Node.js APIs not available in Workers and would cause `fs.write is not implemented` errors.
-
-The custom logger in `payload.config.ts`:
-
-- Routes logs through `console.*` methods which Workers handles correctly
-- Outputs JSON-formatted logs for Cloudflare observability
-- Only active in production (development uses the default `pino-pretty` for better DX)
-
-You can control the log level via the `PAYLOAD_LOG_LEVEL` environment variable (e.g., `debug`, `info`, `warn`, `error`).
-
-### Diagnostic Channel Errors
-
-If you see "Failed to publish diagnostic channel message" errors in your observability logs, these typically come from the `undici` HTTP client library. The template includes `skipSafeFetch: true` in the Media collection to use native fetch instead of undici for file uploads, which helps reduce these errors.
-
-Cloudflare Workers runs in an [isolated environment that cannot access private IP ranges](https://developers.cloudflare.com/workers-vpc/examples/route-across-private-services/) by default, providing built-in SSRF protection. This makes `skipSafeFetch` safe to use.
-
-## Known issues
-
-### Image resizing
-
-Workers do not support `sharp`, so image resizing features are not available. The Media collection has `crop` and `focalPoint` disabled for this reason, and options like `imageSizes` will not work.
-
-### GraphQL
-
-We are currently waiting on some issues with GraphQL to be [fixed upstream in Workers](https://github.com/cloudflare/workerd/issues/5175) so full support for GraphQL is not currently guaranteed when deployed.
-
-### Worker size limits
-
-We currently recommend deploying this template to the Paid Workers plan due to bundle [size limits](https://developers.cloudflare.com/workers/platform/limits/#worker-size) of 3mb. We're actively trying to reduce our bundle footprint over time to better meet this metric.
-
-This also applies to your own code, in the case of importing a lot of libraries you may find yourself limited by the bundle.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+Projet démarré le 12 août 2026 à partir du gabarit Cloudflare D1 de Payload,
+puis déplacé le jour même vers Render, Neon et Cloudinary. Le nettoyage de
+septembre 2026 a retiré les dépendances Cloudflare, MongoDB et D1 devenues
+inutiles, réparé ESLint et documenté l'installation.

@@ -1,14 +1,21 @@
 import type { CollectionConfig } from 'payload'
-import { triggerSiteRebuild } from '../hooks/triggerSiteRebuild'
 
-// Génère un slug (identifiant d'URL) à partir du titre.
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // enlève les accents
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '')
+import { estConnecte, lecturePublique } from '../access'
+import { triggerSiteRebuild } from '../hooks/triggerSiteRebuild'
+import { slugify } from '../lib/slug'
+
+/*
+  Les catégories du blog. Exportées pour que le tableau de bord d'accueil
+  affiche le libellé lisible (« Marketing digital ») et non la valeur stockée
+  (« marketing-digital »).
+*/
+export const CATEGORIES_BLOG = [
+  { label: 'Communication & branding', value: 'branding' },
+  { label: 'Marketing digital', value: 'marketing-digital' },
+  { label: 'Intelligence artificielle & automatisation', value: 'ia' },
+  { label: 'Carte de visite digitale & networking', value: 'carte-digitale' },
+  { label: 'Coulisses & actualités', value: 'agence' },
+] as const
 
 export const Blog: CollectionConfig = {
   slug: 'blog',
@@ -17,12 +24,18 @@ export const Blog: CollectionConfig = {
     plural: 'Articles du blog',
   },
   admin: {
+    group: 'Contenus',
+    hideAPIURL: true,
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'categorie', 'date', 'aLaUne'],
     description: 'Créez, modifiez et illustrez vos articles de blog.',
   },
   access: {
-    read: () => true, // les articles sont lisibles publiquement (le site les affiche)
+    read: lecturePublique, // le site affiche les articles : lecture publique
+    // Écriture réservée aux personnes connectées (administrateurs et éditeurs).
+    create: estConnecte,
+    update: estConnecte,
+    delete: estConnecte,
   },
   hooks: {
     beforeValidate: [
@@ -58,13 +71,7 @@ export const Blog: CollectionConfig = {
       type: 'select',
       label: 'Catégorie',
       defaultValue: 'agence',
-      options: [
-        { label: 'Communication & branding', value: 'branding' },
-        { label: 'Marketing digital', value: 'marketing-digital' },
-        { label: 'Intelligence artificielle & automatisation', value: 'ia' },
-        { label: 'Carte de visite digitale & networking', value: 'carte-digitale' },
-        { label: 'Coulisses & actualités', value: 'agence' },
-      ],
+      options: [...CATEGORIES_BLOG],
     },
     {
       name: 'date',

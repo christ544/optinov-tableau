@@ -1,5 +1,8 @@
-# Déploiement du tableau de bord OPTINOV sur Render (gratuit, sans carte).
+# Déploiement du tableau de bord OPTINOV sur Render (offre gratuite, sans carte).
 # Render lit ce fichier automatiquement (« Blueprint ») et crée le service.
+#
+# Limite de l'offre gratuite : le service s'endort après quinze minutes sans
+# visite et met trente à soixante secondes à se réveiller à la première requête.
 services:
   - type: web
     name: optinov-dashboard
@@ -12,15 +15,34 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22.12.0"
-      # Secret de sécurité Payload — généré automatiquement par Render.
+      # Secret de signature des sessions, généré automatiquement par Render.
       - key: PAYLOAD_SECRET
         generateValue: true
-      # À renseigner dans Render (valeurs privées) :
-      - key: DATABASE_URI # chaîne de connexion MongoDB Atlas
+      # Adresse du site vitrine (CORS et lien « Voir le site en ligne »).
+      - key: FRONTEND_URL
+        value: https://optinov-agence.christkangah14.workers.dev
+      # L'adresse publique du tableau de bord n'a pas besoin d'être renseignée :
+      # Render fournit RENDER_EXTERNAL_URL automatiquement. Ne définir
+      # PAYLOAD_PUBLIC_SERVER_URL qu'avec un nom de domaine dédié.
+      # À renseigner dans l'interface Render (valeurs privées) :
+      - key: DATABASE_URI # chaîne de connexion PostgreSQL Neon (avec ?sslmode=require)
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SITE_DEPLOY_HOOK # URL du Deploy Hook Cloudflare Pages du site vitrine
+        sync: false
+      # E-mails (Gmail de l agence, mot de passe d application) : alertes de demandes.
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: ALERTES_EMAIL
         sync: false

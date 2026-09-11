@@ -1,18 +1,22 @@
 import { getPayload } from 'payload'
 import config from '../../src/payload.config.js'
 
+/*
+  Compte de test des parcours de bout en bout. Administrateur : les tests
+  ouvrent la liste et le formulaire de création des utilisateurs, réservés à
+  ce rôle. Le nom est obligatoire dans la collection.
+*/
 export const testUser = {
   email: 'dev@payloadcms.com',
   password: 'test',
 }
 
 /**
- * Seeds a test user for e2e admin tests.
+ * Crée le compte de test (après avoir supprimé un éventuel reliquat).
  */
 export async function seedTestUser(): Promise<void> {
   const payload = await getPayload({ config })
 
-  // Delete existing test user if any
   await payload.delete({
     collection: 'users',
     where: {
@@ -22,15 +26,14 @@ export async function seedTestUser(): Promise<void> {
     },
   })
 
-  // Create fresh test user
   await payload.create({
     collection: 'users',
-    data: testUser,
+    data: { ...testUser, name: 'Compte de test', role: 'administrateur' },
   })
 }
 
 /**
- * Cleans up test user after tests
+ * Supprime le compte de test après les tests.
  */
 export async function cleanupTestUser(): Promise<void> {
   const payload = await getPayload({ config })
