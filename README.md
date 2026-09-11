@@ -168,20 +168,38 @@ Ce qui est en place par ailleurs :
 - **GraphQL désactivé** : le site n'utilise que l'API REST.
 - **Cookie de session** `Secure` dès que l'adresse publique est en `https://`.
 
-## Déploiement sur Render
-
-Render lit `render.yaml` et crée le service. Variables à renseigner dans son
-interface : `DATABASE_URI` (Neon, avec `?sslmode=require`), les trois variables
-`CLOUDINARY_*` et `SITE_DEPLOY_HOOK`. `PAYLOAD_SECRET` est généré par Render,
-`FRONTEND_URL` est fixée dans `render.yaml`.
+## Déploiement
 
 Les migrations s'appliquent automatiquement au démarrage en production
 (`prodMigrations` dans `src/payload.config.ts`). Le schéma n'est jamais
 modifié « à la volée » (`push: false`) : toute évolution passe par un fichier
-de migration commité.
+de migration commité. Cela vaut pour les deux hébergements ci-dessous.
+
+### Render
+
+Render lit `render.yaml` et crée le service. Variables à renseigner dans son
+interface : `DATABASE_URI` (Neon, avec `?sslmode=require`), les trois variables
+`CLOUDINARY_*`, `SITE_DEPLOY_HOOK`, et les trois variables d'e-mail `SMTP_USER`,
+`SMTP_PASS`, `ALERTES_EMAIL`. `PAYLOAD_SECRET` est généré par Render,
+`FRONTEND_URL`, `SMTP_HOST` et `SMTP_PORT` sont fixées dans `render.yaml`.
 
 Sur l'offre gratuite, le service s'endort après quinze minutes sans visite et
 met trente à soixante secondes à se réveiller : ce n'est pas une panne.
+
+### PlanetHoster (N0C)
+
+Deux fichiers ne servent qu'à cet hébergement, et Render les ignore :
+
+- **`server.cjs`** — le fichier de démarrage exécuté par Passenger, à déclarer
+  comme tel dans le panneau N0C. Extension `.cjs` obligatoire : le projet est en
+  `"type": "module"` et Passenger charge ce fichier avec `require()`.
+- **`deployer.sh`** — le déploiement complet en une commande : code, dépendances,
+  migrations, build bridé, lien `node_modules`, redémarrage, vérification.
+
+Les variables vivent dans un fichier `.env` sur le serveur (voir `.env.example`),
+et `PAYLOAD_PUBLIC_SERVER_URL` y est **obligatoire**. Procédure détaillée :
+[docs/GUIDE-PULL-REQUESTS-ET-DEPLOIEMENT.md](docs/GUIDE-PULL-REQUESTS-ET-DEPLOIEMENT.md),
+section 9.
 
 ## Modifier le contenu pilotable
 

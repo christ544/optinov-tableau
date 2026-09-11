@@ -60,3 +60,10 @@ CLAUDE.md
 
 # Reglages locaux de Claude Code (configuration de lancement du serveur)
 .claude/
+
+# PlanetHoster (N0C) : fichiers produits sur le serveur, jamais commites.
+# tmp/restart.txt est le signal de redemarrage de Passenger, tmp/demarrage.log le
+# compte rendu ecrit par server.cjs, .next.precedent la copie de securite du build
+# precedent posee par deployer.sh le temps de reconstruire.
+/tmp/
+/.next.precedent/

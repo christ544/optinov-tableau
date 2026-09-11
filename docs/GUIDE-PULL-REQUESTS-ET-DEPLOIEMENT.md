@@ -34,12 +34,20 @@ PlanetHoster le jour où l'hébergement change.
 | #5 | tableau de bord | `etape-5-contenus` | paramètres du site, réalisations, témoignages, équipe, FAQ ; **contient deux migrations** |
 | site 1 | site vitrine | `dashboard-payload` | le site lit le tableau de bord, seule source de vérité ; retrait des anciens outils d'édition |
 | #6 | tableau de bord | `etape-6-demandes` | rubrique Demandes, alertes e-mail par le Gmail de l'agence ; **contient une migration** |
+| #7 | tableau de bord | `etape-7-planethoster` | déploiement sur PlanetHoster : fichier de démarrage, script de déploiement, guide |
 | site 2 | site vitrine | `formulaires-vers-dashboard` | les formulaires envoient les demandes au tableau de bord |
 
-**Ordre à respecter :** #1, #2, #3, #4, #5, puis la PR « site 1 » **après** que Render a
-redéployé le tableau de bord (section 5) ; ensuite #6, puis « site 2 » après le
-redéploiement suivant. Dans l'autre sens, la construction du site échoue exprès,
-parce que les nouvelles rubriques n'existent pas encore dans l'API.
+**Ordre à respecter :** #1, #2, #3, #4, #5, puis la PR « site 1 » **après** que le
+tableau de bord a été redéployé (section 5) ; ensuite #6 et #7, puis « site 2 »
+après le redéploiement suivant. Dans l'autre sens, la construction du site échoue
+exprès, parce que les nouvelles rubriques n'existent pas encore dans l'API.
+
+**Raccourci : tout fusionner d'un coup.** Les branches étant empilées, celle de
+l'étape 7 contient déjà les six précédentes. Fusionner la **seule PR #7** met donc
+`main` à jour en une fois, et GitHub referme les six autres en « Merged » tout
+seul. C'est le chemin à prendre quand la relecture pas à pas n'est pas possible —
+en gardant la règle qui compte vraiment : le site vitrine ne se reconstruit
+qu'**après** que le tableau de bord est en ligne avec ses nouvelles rubriques.
 
 **Après la fusion de #6**, renseigner dans Render trois variables : `SMTP_USER`
 (l'adresse Gmail de l'agence), `SMTP_PASS` (un mot de passe d'application Google,
@@ -145,6 +153,13 @@ DASHBOARD_URL=http://localhost:3000 npm run build  # produit le dossier out/
 - Le service gratuit s'endort après quinze minutes sans visite et met jusqu'à une
   minute à se réveiller. Ce n'est pas une panne.
 
+### Tableau de bord (PlanetHoster)
+
+Rien ne part tout seul : une fusion ne fait que poser le nouveau code sur GitHub.
+Il faut ensuite lancer le déploiement sur le serveur (`./deployer.sh`, section 9).
+Tant qu'on ne l'a pas fait, la version en ligne reste l'ancienne — ce qui est aussi
+une sécurité : on choisit le moment.
+
 ### Site (Cloudflare)
 
 - Après la fusion de la PR du site, lance une construction dans Cloudflare
@@ -202,30 +217,40 @@ disparaît.
 
 ---
 
-## 9. Déployer sur PlanetHoster (N0C)
+## 9. Déployer le tableau de bord sur PlanetHoster (N0C)
 
-Aujourd'hui le tableau de bord tourne sur Render (gratuit, mais il s'endort) et le
-site sur Cloudflare. Si un jour le tableau de bord doit rejoindre l'hébergement
-PlanetHoster de l'agence, comme le site immobilier, voici la marche à suivre. Le
-site vitrine, lui, peut rester sur Cloudflare : il est statique.
+Le site vitrine reste sur Cloudflare : il est statique, et rien de ce qui suit ne
+le concerne. Seul le tableau de bord déménage.
 
-### Ce qu'on crée dans le panneau N0C
+**Deux fichiers du dépôt n'existent que pour cet hébergement.** Render ne les lit
+pas ; ils peuvent donc rester en place pendant toute la durée de la bascule.
+
+| Fichier | Rôle |
+| --- | --- |
+| `server.cjs` | le « fichier de démarrage » que Passenger exécute. Sans lui, l'application ne démarre pas sur N0C. |
+| `deployer.sh` | enchaîne les gestes d'un déploiement, dans le seul ordre qui fonctionne. |
+
+### A. Ce qu'on crée dans le panneau N0C
 
 | Élément | Valeur |
 | --- | --- |
-| Sous-domaine | `admin.<domaine de l'agence>` |
-| Application Node.js | version 22, mode production, répertoire de l'application = le clone du dépôt |
+| Sous-domaine | `admin.<domaine de l'agence>`, avec son certificat SSL |
 | Base PostgreSQL | une base et un utilisateur dédiés (menu « Bases de données ») |
-| Dossier des images | `~/media-optinov-agence`, **à côté** de l'application, jamais dedans (sinon il disparaît à chaque déploiement) |
+| Application Node.js | version **22**, mode **production** |
+| → Répertoire de l'application | `optinov-admin` (le clone du dépôt, voir D) |
+| → Fichier de démarrage | **`server.cjs`** — et surtout pas `npm start`, que Passenger ne sait pas exécuter |
+| → URL de l'application | le sous-domaine créé ci-dessus |
 
-### Les six règles de N0C
+### B. Les six règles de N0C
 
 Elles ne sont écrites nulle part chez l'hébergeur, et chacune coûte une demi-journée
-quand on ne les connaît pas.
+quand on ne les connaît pas. `deployer.sh` les applique toutes : elles sont listées
+ici pour comprendre ce qu'il fait, et pour les cas où l'on travaille à la main.
 
 1. **Activer l'environnement Node avant tout `npm`** (la commande d'activation est
    affichée dans le panneau, en haut de l'application). Sans cela, `npm` installe
-   avec le mauvais Node et l'application refuse de démarrer.
+   avec le mauvais Node et l'application refuse de démarrer, sur des erreurs de
+   modules natifs (`sharp`, en général) alors que l'installation s'est « bien passée ».
 2. **Installer avec les dépendances de développement** :
    `NODE_ENV=development npm ci --include=dev`. Sans elles, TypeScript manque et le
    build échoue.
@@ -233,95 +258,165 @@ quand on ne les connaît pas.
 4. **`node_modules` est un lien symbolique à l'exécution, un vrai dossier au build.**
    `npm ci` remplace le lien par un dossier : on construit, **puis** on repose le
    lien. Jamais l'inverse.
-5. **Le schéma se crée par migrations** (`npm run migrate`), jamais par `push`.
+5. **Construire avec Webpack** (`next build --webpack`). Turbopack, le constructeur
+   par défaut de Next 16, réclame une bibliothèque système que cet hébergement n'a
+   pas : le build s'arrête sur « Turbopack is not supported on this platform ».
 6. **Passenger garde le processus en mémoire** : après tout changement,
    `touch tmp/restart.txt` dans le dossier de l'application, ou ↻ dans le panneau.
 
-### Premier déploiement, en SSH sur le serveur
+### C. Le fichier `.env`, sur le serveur
 
-```bash
-# 1. Le code
-git clone https://github.com/christ544/optinov-tableau.git ~/optinov-admin
-cd ~/optinov-admin
-
-# 2. Les variables (voir la liste ci-dessous)
-cp .env.example .env && nano .env
-
-# 3. L'environnement Node de l'application (commande donnée par le panneau)
-source ~/nodevenv/optinov-admin/22/bin/activate
-
-# 4. Les dépendances, puis le schéma
-NODE_ENV=development npm ci --include=dev
-npm run migrate
-
-# 5. La construction, ressources bridées, avec Webpack
-NODE_OPTIONS="--no-deprecation --max-old-space-size=2048" \
-NEXT_CPUS=1 RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 \
-  npx next build --webpack
-
-# 6. Reposer le lien node_modules (règle 4)
-mv node_modules ~/nodevenv/optinov-admin/22/lib/node_modules
-ln -s ~/nodevenv/optinov-admin/22/lib/node_modules node_modules
-
-# 7. Démarrer, puis vérifier
-mkdir -p tmp && touch tmp/restart.txt
-curl -s -o /dev/null -w "%{http_code}\n" https://admin.<domaine>/admin   # attendu : 200
-```
-
-### Variables d'environnement à renseigner
+Sur Render, les variables se saisissent dans l'interface. Sur PlanetHoster, elles
+vivent dans un fichier `.env` **à la racine de l'application**, créé à partir de
+`.env.example` et **jamais commité** — il contient le mot de passe de la base et
+celui des e-mails.
 
 | Variable | Valeur |
 | --- | --- |
 | `DATABASE_URI` | la chaîne de connexion de la base PostgreSQL N0C |
-| `PAYLOAD_SECRET` | une chaîne aléatoire : `openssl rand -hex 32` |
+| `PAYLOAD_SECRET` | une chaîne aléatoire : `openssl rand -hex 32`. La garder stable : en changer déconnecte tout le monde |
 | `PAYLOAD_PUBLIC_SERVER_URL` | `https://admin.<domaine>` : **exactement** l'adresse par laquelle on ouvre l'admin, sinon tout enregistrement est refusé |
-| `FRONTEND_URL` | l'adresse du site vitrine |
-| `SITE_DEPLOY_HOOK` | l'URL du Deploy Hook Cloudflare du site |
-| `CLOUDINARY_*` | à garder si les images restent sur Cloudinary ; à vider pour les stocker sur le disque du serveur |
+| `FRONTEND_URL` | l'adresse du site vitrine (autorise ses appels à l'API) |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | à recopier depuis Render pour garder les images déjà en ligne (voir F) |
+| `SITE_DEPLOY_HOOK` | l'URL du Deploy Hook Cloudflare du site vitrine |
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` | l'adresse Gmail de l'agence |
+| `SMTP_PASS` | le mot de passe d'application Google (seize caractères), jamais le mot de passe du compte |
+| `SMTP_FROM` | l'adresse affichée comme expéditeur (souvent la même que `SMTP_USER`) |
+| `ALERTES_EMAIL` | l'adresse qui reçoit les alertes de nouvelles demandes |
 
-### Mises à jour suivantes
+`SMTP_HOST` et `SMTP_PORT` étaient fixés par `render.yaml` : sur PlanetHoster, il
+faut les écrire soi-même. Sans eux, les demandes sont bien enregistrées mais
+personne n'est prévenu.
 
-Une mise à jour de **code** (pas de contenu : le contenu se fait dans l'admin) :
+### D. Premier déploiement, en SSH sur le serveur
+
+```bash
+# 1. Le code, dans le dossier déclaré comme répertoire de l'application
+git clone https://github.com/christ544/optinov-tableau.git ~/optinov-admin
+cd ~/optinov-admin
+
+# 2. Créer l'application Node.js dans le panneau N0C (section A) en pointant sur
+#    ce dossier, puis revenir ici. Le panneau y installe tmp/ et le lien
+#    node_modules : c'est normal, et c'est justement ce qu'on veut.
+
+# 3. Les variables (section C)
+cp .env.example .env && nano .env
+
+# 4. Le déploiement lui-même
+chmod +x deployer.sh
+N0C_UTILISATEUR=<votre identifiant> DOMAINE_ADMIN=https://admin.<domaine> \
+  ./deployer.sh premier
+```
+
+Le script s'arrête de lui-même si le `.env` est incomplet, si le build échoue (en
+restaurant le build précédent) ou si l'application ne répond pas après le
+redémarrage. Il se termine par deux vérifications : la page de connexion et l'API
+des paramètres doivent répondre.
+
+Pour éviter de retaper les deux variables à chaque fois, renseigner `UTILISATEUR`
+et `DOMAINE` en haut de `deployer.sh` — le fichier est fait pour ça.
+
+### E. Le premier compte administrateur
+
+Ouvrir `https://admin.<domaine>/admin` : tant qu'aucun compte n'existe, Payload
+propose lui-même de créer le premier, qui est administrateur. **Le faire tout de
+suite** : cette page est ouverte à quiconque connaît l'adresse.
+
+Si la base a été reprise de Render (voir F), les comptes existants sont déjà là et
+cette page n'apparaît pas.
+
+### F. Les images, et la base
+
+Deux façons de procéder, selon ce qu'on veut garder.
+
+- **Garder Cloudinary** (le plus simple) : recopier les trois variables
+  `CLOUDINARY_*` depuis Render. Les images déjà en ligne continuent de s'afficher,
+  les nouvelles partent au même endroit, et il n'y a rien à sauvegarder sur le
+  serveur.
+- **Passer au disque du serveur** : laisser les trois variables vides. Les images
+  s'écrivent alors dans `./media`, à l'intérieur de l'application. Ce dossier
+  survit aux déploiements (`git pull` n'y touche pas), mais c'est à vous de le
+  sauvegarder — et les images déjà déposées sur Cloudinary ne suivent pas.
+
+Pour la **base**, si le tableau de bord a déjà servi sur Render : exporter la base
+Neon (`pg_dump`) et l'importer dans la base N0C **avant** le premier déploiement.
+Sinon, on repart d'une base vide, et les migrations la remplissent (rubriques,
+vingt questions de FAQ, coordonnées du site).
+
+### G. Prévenir le site vitrine de la nouvelle adresse
+
+Le site vitrine pointe encore sur l'adresse Render, écrite en dur comme valeur par
+défaut. Il faut donc, dans **Cloudflare** > Workers & Pages > `optinov-agence` >
+Settings > Variables d'environnement (côté **build**) :
+
+| Variable | Valeur |
+| --- | --- |
+| `DASHBOARD_URL` | `https://admin.<domaine>` — utilisée à la construction, pour lire les contenus |
+| `NEXT_PUBLIC_DASHBOARD_URL` | `https://admin.<domaine>` — inscrite dans les pages, pour l'envoi des formulaires |
+
+Puis relancer une construction du site. Tant que ces deux variables ne sont pas
+posées, le site continue d'interroger Render : les contenus restent ceux de
+l'ancien tableau de bord, et les formulaires y envoient les demandes.
+
+Vérifier ensuite, côté tableau de bord, que `FRONTEND_URL` porte bien l'adresse du
+site : c'est elle qui autorise les formulaires à écrire.
+
+### H. Mises à jour suivantes
+
+Une mise à jour de **code** (pas de contenu : le contenu se fait dans l'admin et
+prend effet immédiatement) :
 
 ```bash
 cd ~/optinov-admin
-source ~/nodevenv/optinov-admin/22/bin/activate
-git pull
-NODE_ENV=development npm ci --include=dev
-npm run migrate
-NODE_OPTIONS="--no-deprecation --max-old-space-size=2048" \
-NEXT_CPUS=1 RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 \
-  npx next build --webpack
-mv node_modules ~/nodevenv/optinov-admin/22/lib/node_modules && ln -s ~/nodevenv/optinov-admin/22/lib/node_modules node_modules
-touch tmp/restart.txt
+./deployer.sh
 ```
 
-Le site immobilier a regroupé ces gestes dans un script `deployer.sh` : il peut
-servir de modèle.
+Le script récupère le code, installe, applique les migrations, construit, repose le
+lien `node_modules`, redémarre et vérifie que tout répond.
 
-### Si ça ne démarre pas
+### I. Si ça ne démarre pas
 
-1. Le journal de Passenger est dans le panneau (application → « Journal »), ou dans
-   `~/logs/`. La première ligne d'erreur dit presque toujours de quoi il s'agit.
-2. `node_modules` n'est plus un lien ? Refaire l'étape 6.
+1. **Lire `tmp/demarrage.log`** dans le dossier de l'application. `server.cjs` y
+   écrit son propre compte rendu — Node, port, variables présentes ou absentes,
+   mémoire — parce que le journal de Passenger, lui, n'est pas lisible depuis le
+   compte : il ne donne qu'une erreur 500 et un « Error ID » réservé au support.
+2. `node_modules` n'est plus un lien ? Relancer `./deployer.sh`, qui le répare.
 3. « Vous n'êtes pas autorisé à effectuer cette action » à l'enregistrement, alors
    que la consultation marche : `PAYLOAD_PUBLIC_SERVER_URL` ne correspond pas à
    l'adresse ouverte dans le navigateur.
-4. Une variable d'environnement modifiée ne prend effet qu'après `touch tmp/restart.txt`.
+4. Le journal s'arrête après « Demarrage demande », sans erreur : le processus a
+   été tué, presque toujours pour dépassement du quota mémoire. Les lignes
+   « preparation en cours » donnent la courbe.
+5. Une variable d'environnement modifiée ne prend effet qu'après
+   `touch tmp/restart.txt`.
 
 ---
 
 ## 10. Ce qui reste à faire après les fusions
 
-Une fois les sept PR fusionnées et Render redéployé, ces gestes terminent la mise
-en service. Ils ne demandent pas de code, mais ils demandent les accès de l'agence.
+Une fois les PR fusionnées et le tableau de bord redéployé, ces gestes terminent la
+mise en service. Ils ne demandent pas de code, mais ils demandent les accès de
+l'agence.
+
+**Où se saisissent les variables**, selon l'hébergement du tableau de bord :
+
+| Hébergement | Où | Prise en compte |
+| --- | --- | --- |
+| Render | service `optinov-dashboard` > Environment | Render redémarre tout seul |
+| PlanetHoster | le fichier `.env` de l'application (section 9.C) | après `touch tmp/restart.txt` |
+
+Ci-dessous, « renseigner une variable » veut dire : à l'endroit indiqué par ce
+tableau. De même, « les journaux » désigne Render > Logs, ou
+`tmp/demarrage.log` et le journal Passenger sur PlanetHoster.
 
 ### A. Brancher les alertes e-mail (dès la fusion de #6)
 
 1. Dans le **compte Google de l'agence** : Sécurité > Validation en deux étapes
    (l'activer si besoin) > **Mots de passe des applications** > créer un mot de
    passe nommé « Tableau de bord ». Google affiche seize caractères : les copier.
-2. Dans **Render** > service `optinov-dashboard` > Environment, renseigner :
+2. Renseigner :
 
    | Variable | Valeur |
    | --- | --- |
@@ -329,25 +424,25 @@ en service. Ils ne demandent pas de code, mais ils demandent les accès de l'age
    | `SMTP_PASS` | les seize caractères du mot de passe d'application (jamais le mot de passe du compte) |
    | `ALERTES_EMAIL` | l'adresse qui doit recevoir les alertes (peut être la même) |
 
-   `SMTP_HOST` et `SMTP_PORT` sont déjà fixés dans `render.yaml`. Render redémarre
-   le service tout seul.
+   Sur Render, `SMTP_HOST` et `SMTP_PORT` sont déjà fixés par `render.yaml`. Sur
+   PlanetHoster, il faut les écrire aussi : `smtp.gmail.com` et `465`.
 3. **Tester avec un vrai formulaire** depuis le site en ligne (page Contact) :
    la demande doit apparaître dans le tableau de bord, rubrique Demandes ; l'alerte
    doit arriver sur `ALERTES_EMAIL` ; l'accusé de réception sur l'adresse saisie
    dans le formulaire. Ensuite, supprimer la demande de test dans le tableau de bord.
-4. Si l'alerte n'arrive pas : Render > Logs, chercher « Alerte NON envoyée ». La
-   cause est presque toujours un mot de passe d'application mal copié ou la
+4. Si l'alerte n'arrive pas : dans les journaux, chercher « Alerte NON envoyée ».
+   La cause est presque toujours un mot de passe d'application mal copié ou la
    validation en deux étapes désactivée.
 
 ### B. Vérifier la reconstruction automatique du site
 
 1. Dans **Cloudflare** > Workers & Pages > `optinov-agence` > Settings > Builds >
    **Deploy hooks** : créer un hook s'il n'existe pas, copier son URL.
-2. Dans **Render** > Environment : `SITE_DEPLOY_HOOK` = cette URL.
+2. Renseigner `SITE_DEPLOY_HOOK` = cette URL.
 3. Test de bout en bout : modifier un témoignage dans le tableau de bord,
    enregistrer, attendre deux minutes (regroupement) puis le temps du build
    Cloudflare (deux à trois minutes). La modification doit apparaître sur le site.
-   Si rien ne bouge : Render > Logs, chercher « Reconstruction du site » ; puis
+   Si rien ne bouge : dans les journaux, chercher « Reconstruction du site » ; puis
    Cloudflare > Deployments, vérifier qu'un build est parti et lire son journal.
 
 ### C. Créer les comptes de l'équipe
@@ -398,4 +493,6 @@ masque ou affiche un message d'attente.
 | revenir à la version en ligne | `git checkout main && git pull` |
 | ce qui a changé en production | historique de `main` sur GitHub, ou `git log --oneline main` |
 | reconstruire le site | enregistrer n'importe quoi dans le tableau de bord, ou « Retry deployment » dans Cloudflare |
+| déployer sur PlanetHoster | `cd ~/optinov-admin && ./deployer.sh` |
 | redémarrer sur PlanetHoster | `touch tmp/restart.txt` dans le dossier de l'application |
+| comprendre un démarrage raté | `tail -40 ~/optinov-admin/tmp/demarrage.log` |

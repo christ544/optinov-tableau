@@ -33,6 +33,20 @@ const eslintConfig = [
     },
   },
   {
+    /*
+      Fichiers CommonJS (`server.cjs`, le fichier de démarrage de Passenger sur
+      PlanetHoster). `require()` n'y est pas un choix de style : Passenger charge
+      le fichier de démarrage avec `require()`, et comme le projet déclare
+      `"type": "module"`, seule l'extension `.cjs` permet d'y répondre. La règle
+      qui interdit `require()` — pensée pour le code applicatif, écrit en modules
+      ES — n'a donc pas de sens ici.
+    */
+    files: ['**/*.cjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     // Fichiers générés par Payload ou Next : on ne les relit pas.
     ignores: [
       '.next/',
